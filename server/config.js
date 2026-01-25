@@ -24,7 +24,12 @@ export const poiDisplayFields = [
 export const zoomConfig = {
     showCities: 4,    // 缩放级别 >= 4 时显示城市边界
     showCells: 8,     // 缩放级别 >= 8 时显示网格
-    showPOIs: 10,     // 缩放级别 >= 10 时显示 POI
+    poiLevels: {
+        province: 0,  // 0-7 级显示省级聚合
+        city: 8,      // 8-10 级显示市级聚合
+        district: 11, // 11-12 级显示区县级聚合
+        detail: 13    // >= 13 级显示详细 POI
+    },
 };
 
 /**

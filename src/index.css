@@ -1,342 +1,523 @@
-/* ===== 设计系统 ===== */
+/* ===== Design System: Scientific Premium ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root {
-  /* 颜色 */
-  --color-bg: #0f172a;
-  --color-bg-elevated: #1e293b;
-  --color-bg-glass: rgba(30, 41, 59, 0.2);
-  --color-surface: #334155;
-  --color-border: #475569;
-  --color-text: #f1f5f9;
+  /* Palette: Academic Dark */
+  --color-bg: #0B1121;
+  /* Deep Midnight */
+  --color-bg-elevated: #151e32;
+  /* Slightly lighter for cards */
+  --color-bg-glass: rgba(11, 17, 33, 0.7);
+  /* Glass effect base */
+
+  --color-border: rgba(148, 163, 184, 0.15);
+  --color-border-hover: rgba(148, 163, 184, 0.3);
+
+  /* Text */
+  --color-text: #f8fafc;
+  /* Slate 50 */
   --color-text-muted: #94a3b8;
-  --color-primary: #3b82f6;
-  --color-primary-glow: rgba(59, 130, 246, 0.3);
-  --color-accent: #22d3ee;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  
-  /* 间距 */
-  --space-xs: 4px;
-  --space-sm: 8px;
+  /* Slate 400 */
+  --color-text-dim: #64748b;
+  /* Slate 500 */
+
+  /* Accents */
+  --color-primary: #06b6d4;
+  /* Cyan 500 - Scientific/Tech feel */
+  --color-primary-glow: rgba(6, 182, 212, 0.2);
+  --color-secondary: #6366f1;
+  /* Indigo 500 */
+  --color-accent: #f59e0b;
+  /* Amber 500 - Highlights like POIs */
+
+  /* Status */
+  --color-success: #10b981;
+  --color-error: #ef4444;
+
+  /* Spacing */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
-  
-  /* 圆角 */
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Radius */
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
-  
-  /* 阴影 */
-  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 40px var(--color-primary-glow);
-  
-  /* 动画 */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --radius-full: 9999px;
+
+  /* Effects */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
+  --backdrop-blur: blur(12px);
+
+  /* Animation */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== 全局样式 ===== */
-*, *::before, *::after {
+/* ===== Global Styles ===== */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.6;
+  line-height: 1.5;
   overflow: hidden;
+  /* App-like feel */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ===== 应用布局 ===== */
+code,
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ===== Layout Utilities ===== */
 .app {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, var(--color-bg) 0%, #1a1a2e 50%, var(--color-bg) 100%);
-}
-
-/* ===== 头部 ===== */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-md) var(--space-lg);
-  background: var(--color-bg-glass);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--color-border);
-  z-index: 1000;
-}
-
-.header__title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: #22d3ee;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header__subtitle {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  margin-left: var(--space-md);
-}
-
-/* ===== 主内容区 ===== */
-.main-content {
-  flex: 1;
-  display: flex;
-  position: relative;
-  overflow: hidden;
-}
-
-/* ===== 地图容器 ===== */
-.map-container {
-  flex: 1;
   position: relative;
 }
 
-.map-container .leaflet-container {
+.app.is-loading,
+.app.is-loading * {
+  cursor: wait !important;
+}
+
+/* Full screen map generic container */
+.map-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  background: var(--color-bg);
+  z-index: 0;
 }
 
-/* Leaflet 样式覆盖 */
-.leaflet-control-zoom {
-  border: none !important;
-  box-shadow: var(--shadow-lg) !important;
-}
-
-.leaflet-control-zoom a {
-  background: var(--color-bg-elevated) !important;
-  color: var(--color-text) !important;
-  border: 1px solid var(--color-border) !important;
-  transition: var(--transition-fast);
-}
-
-.leaflet-control-zoom a:hover {
-  background: var(--color-surface) !important;
-  color: var(--color-accent) !important;
-}
-
-.leaflet-control-attribution {
-  background: var(--color-bg-glass) !important;
-  color: var(--color-text-muted) !important;
-  font-size: 0.75rem;
-}
-
-.leaflet-control-attribution a {
-  color: var(--color-primary) !important;
-}
-
-.leaflet-popup-content-wrapper {
-  border-radius: 4px !important;
-}
-
-/* ===== 详情面板 ===== */
-.detail-panel {
+/* UI Overlay Layer - sits on top of map */
+.ui-layer {
   position: absolute;
-  top: var(--space-lg);
-  right: var(--space-lg);
-  width: 360px;
-  max-height: calc(100% - var(--space-xl) * 2);
-  background: var(--color-bg-glass);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
-  overflow: hidden;
-  z-index: 1000;
-  animation: slideIn var(--transition-slow) forwards;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.detail-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-md) var(--space-lg);
-  background: rgba(85, 182, 133, 0.2);
-  color: white;
-}
-
-.detail-panel__title {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.detail-panel__close {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 50%;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: var(--transition-fast);
-}
-
-.detail-panel__close:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-}
-
-.detail-panel__content {
-  padding: var(--space-lg);
-}
-
-.detail-panel__location {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--space-md);
-  font-size: 0.875rem;
-}
-
-.detail-panel__location-icon {
-  color: var(--color-accent);
-}
-
-/* ===== 详情字段列表 ===== */
-.field-list {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  /* Let clicks pass through to map by default */
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
 }
 
-.field-item {
+/* Enable pointer events only on direct children of UI layer that need it */
+.ui-layer>* {
+  pointer-events: auto;
+}
+
+/* ===== Header / Navbar ===== */
+.params-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-lg);
+  background: linear-gradient(to bottom, rgba(11, 17, 33, 0.9) 0%, rgba(11, 17, 33, 0) 100%);
+  /* Gentle gradient instead of hard box */
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-text);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.brand__subtitle {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-indicators {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--color-bg-glass);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  backdrop-filter: var(--backdrop-blur);
+  box-shadow: var(--shadow-sm);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
+}
+
+.status-dot--loading {
+  background: var(--color-primary);
+  box-shadow: 0 0 12px var(--color-primary);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===== Panels & Cards ===== */
+.glass-panel {
+  background: var(--color-bg-glass);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-normal);
+}
+
+.glass-panel:hover {
+  border-color: var(--color-border-hover);
+}
+
+/* Detail Panel specialized style */
+.detail-view {
+  position: absolute;
+  top: var(--space-3xl);
+  right: var(--space-3xl);
+  width: 380px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight var(--transition-normal) forwards;
+  z-index: 1000;
+  cursor: default;
+}
+
+.detail-view__header {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: var(--space-md);
-  background: var(--color-surface);
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: grab;
+  user-select: none;
+  /* Prevent text selection during drag */
+}
+
+.detail-view__header:active {
+  cursor: grabbing;
+}
+
+.detail-view.is-dragging {
+  cursor: grabbing !important;
+  opacity: 0.9;
+  border-color: var(--color-primary);
+}
+
+.detail-view__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.detail-view__subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.detail-view__close-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
   border-radius: var(--radius-md);
-  border-left: 4px solid var(--color-primary);
+  display: flex;
   transition: var(--transition-fast);
 }
 
-.field-item:hover {
-  transform: translateX(4px);
-  background: var(--color-border);
-}
-
-.field-item__label {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.field-item__value {
-  font-size: 1.25rem;
-  font-weight: 700;
+.detail-view__close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: var(--color-text);
 }
 
-/* ===== 缩放提示 ===== */
-.zoom-hint {
-  position: absolute;
-  bottom: var(--space-lg);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: var(--space-sm) var(--space-lg);
-  background: var(--color-bg-glass);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
-  z-index: 1000;
-  animation: fadeIn var(--transition-normal) forwards;
+.detail-view__content {
+  padding: var(--space-lg);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Data Fields */
+.data-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xs);
 }
 
-/* ===== 加载状态 ===== */
-.loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.data-row {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.loading__spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--color-surface);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.data-row:last-child {
+  border-bottom: none;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading__text {
+.data-label {
+  font-size: 0.8rem;
   color: var(--color-text-muted);
-  font-size: 0.875rem;
 }
 
-/* ===== 图例 ===== */
-.legend {
+.data-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+/* ===== Map Elements ===== */
+.legend-card {
   position: absolute;
   bottom: var(--space-lg);
   left: var(--space-lg);
   padding: var(--space-md);
-  background: var(--color-bg-glass);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  z-index: 1000;
+  min-width: 200px;
 }
 
-.legend__title {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+.legend-title {
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
   margin-bottom: var(--space-sm);
+  font-weight: 600;
 }
 
-.legend__item {
+.legend-item {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: 0.8rem;
-  margin-top: var(--space-xs);
+  font-size: 0.85rem;
 }
 
-.legend__color {
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-sm);
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Leaflet Customization */
+.leaflet-container {
+  background: var(--color-bg) !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: var(--shadow-md) !important;
+  margin-right: var(--space-lg) !important;
+  margin-bottom: var(--space-lg) !important;
+}
+
+.leaflet-bar a {
+  background-color: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 16px !important;
+  transition: all var(--transition-fast);
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--color-surface) !important;
+  color: var(--color-primary) !important;
+}
+
+.leaflet-bar a:first-child {
+  border-top-left-radius: var(--radius-md) !important;
+  border-top-right-radius: var(--radius-md) !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom-left-radius: var(--radius-md) !important;
+  border-bottom-right-radius: var(--radius-md) !important;
+}
+
+/* Popup Customization */
+.leaflet-popup-content-wrapper {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-left: none;
+}
+
+/* Animations */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Loading Spinner */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 17, 33, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(6, 182, 212, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--color-primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== City Clusters ===== */
+.custom-city-cluster {
+  background: none;
+  border: none;
+}
+
+.city-cluster-marker {
+  backdrop-filter: blur(4px);
+  border: none !important;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  text-align: center;
+  padding: 4px;
+}
+
+.cluster-province {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.cluster-city {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.cluster-district {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.city-cluster-marker:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+  z-index: 1000 !important;
+}
+
+.cluster-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.city-name {
+  font-size: 10px;
+  line-height: 1.1;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.city-count {
+  font-size: 11px;
+  opacity: 0.8;
 }

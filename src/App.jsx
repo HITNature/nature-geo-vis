@@ -7,11 +7,20 @@ function App() {
     const [selectedFeature, setSelectedFeature] = useState(null);
     const [zoom, setZoom] = useState(5);
 
+    const [isLoading, setIsLoading] = useState(false);
+
     useEffect(() => {
+        setIsLoading(true);
         fetch('/api/config')
             .then(res => res.json())
-            .then(data => setConfig(data))
-            .catch(err => console.error('Failed to load config:', err));
+            .then(data => {
+                setConfig(data);
+                setIsLoading(false);
+            })
+            .catch(err => {
+                console.error('Failed to load config:', err);
+                setIsLoading(false);
+            });
     }, []);
 
     const handlePOIClick = (feature) => {
@@ -27,24 +36,37 @@ function App() {
     };
 
     return (
-        <div className="app">
-            <header className="header">
-                <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <h1 className="header__title">教育资源分布可视化</h1>
-                    <span className="header__subtitle">(Work in Progress)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
-                    <span>缩放级别: {zoom}</span>
-                </div>
-            </header>
-
-            <main className="main-content">
+        <div className={`app ${isLoading ? 'is-loading' : ''}`}>
+            {/* Layer 1: Map Canvas (Background) */}
+            <div className="map-canvas">
                 <MapView
                     config={config}
+                    selectedFeature={selectedFeature}
                     onPOIClick={handlePOIClick}
+                    onPopupClose={handleClosePanel}
                     onZoomChange={handleZoomChange}
+                    onLoadingChange={setIsLoading}
                 />
+            </div>
 
+            {/* Layer 2: UI Overlay (Foreground) */}
+            <div className="ui-layer">
+                {/* Header / Status Bar */}
+                <header className="params-bar">
+                    <div className="brand">
+                        <h1 className="brand__title">Nature Geo Vis</h1>
+                        <span className="brand__subtitle">Educational Resource Distribution</span>
+                    </div>
+
+                    <div className="status-indicators">
+                        <div className={`status-dot ${isLoading ? 'status-dot--loading' : ''}`}></div>
+                        <span>{isLoading ? 'SYNCING DATA...' : 'SYSTEM READY'}</span>
+                        <div style={{ width: '1px', height: '12px', background: 'var(--color-border)' }}></div>
+                        <span>ZOOM: {zoom.toFixed(1)}</span>
+                    </div>
+                </header>
+
+                {/* Right Side: Detail Panel */}
                 {selectedFeature && config && (
                     <DetailPanel
                         feature={selectedFeature}
@@ -54,20 +76,47 @@ function App() {
                     />
                 )}
 
-                {config && zoom < config.zoomConfig.showPOIs && (
-                    <div className="zoom-hint">
-                        🔍 放大到城市级别查看初中POI数据
-                    </div>
-                )}
-
-                <div className="legend">
-                    <div className="legend__title">图例</div>
-                    <div className="legend__item">
-                        <div className="legend__color" style={{ background: '#f59e0b' }}></div>
-                        <span>初中 POI</span>
+                {/* Bottom Left: Legend */}
+                <div className="glass-panel legend-card">
+                    <div className="legend-title">Legend</div>
+                    <div className="legend-item">
+                        <div className="legend-dot" style={{ background: '#f59e0b', boxShadow: '0 0 8px #f59e0b' }}></div>
+                        <span>Junior High School (POI)</span>
                     </div>
                 </div>
-            </main>
+
+                {/* Status Bar / Hint (Floating) */}
+                <div style={{
+                    position: 'absolute',
+                    bottom: '32px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(11, 17, 33, 0.85)',
+                    padding: '8px 20px',
+                    borderRadius: '999px',
+                    fontSize: '0.8rem',
+                    color: '#f8fafc',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    transition: 'all 0.3s ease'
+                }}>
+                    {isLoading ? (
+                        <>
+                            <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div>
+                            <span style={{ color: 'var(--color-primary)' }}>Rendering spatial data...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span style={{ opacity: 0.6 }}>Insight:</span>
+                            <span>{zoom < (config?.zoomConfig.showCells || 8) ? 'Zoom in for grid-level indicators' : 'Explore detail grids on the map'}</span>
+                        </>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

@@ -22,6 +22,12 @@ let poisData = null;
 // Tile indexes
 let cellsIndex = null;
 let poisIndex = null;
+let aggregatedPois = {
+    province: { type: 'FeatureCollection', features: [] },
+    city: { type: 'FeatureCollection', features: [] },
+    district: { type: 'FeatureCollection', features: [] }
+};
+let cityAggregatedPois = null;
 
 function loadData() {
     console.log('Loading GeoJSON data...');
@@ -50,19 +56,77 @@ function loadData() {
         cellsData = { type: 'FeatureCollection', features: [] };
     }
 
-        try {
-            poisData = JSON.parse(fs.readFileSync(path.join(dataDir, 'pois.geojson'), 'utf-8'));
-            console.log(`  Loaded ${poisData.features.length} POIs`);
-        } catch (e) {
-            console.warn('  pois.geojson not found');
-            poisData = { type: 'FeatureCollection', features: [] };
-        }
+    try {
+        poisData = JSON.parse(fs.readFileSync(path.join(dataDir, 'pois.geojson'), 'utf-8'));
+        console.log(`  Loaded ${poisData.features.length} POIs`);
 
-        // Initialize tile indexes
-        console.log('  Indexing data for tiles...');
-        cellsIndex = geojsonvt(cellsData, { maxZoom: 20, indexMaxZoom: 5, indexMaxPoints: 100000 });
-        poisIndex = geojsonvt(poisData, { maxZoom: 20, indexMaxZoom: 5, indexMaxPoints: 100000 });
-        console.log('  Tiling complete.');
+        // Compute multi-level aggregation
+        console.log('  Computing administrative aggregations...');
+        const levels = ['province', 'city', 'district'];
+        aggregatedPois = {};
+
+        levels.forEach((level, levelIdx) => {
+            const aggregation = {};
+
+            poisData.features.forEach(f => {
+                // 生成层次化的唯一键，避免不同城市的同名区县聚合在一起
+                let keyParts = [];
+                for (let i = 0; i <= levelIdx; i++) {
+                    keyParts.push(f.properties[levels[i]] || 'Unknown');
+                }
+                const key = keyParts.join(':');
+                const name = f.properties[level] || 'Unknown';
+
+                if (!aggregation[key]) {
+                    aggregation[key] = {
+                        count: 0,
+                        latSum: 0,
+                        lngSum: 0,
+                        name: name,
+                        key: key
+                    };
+                }
+                aggregation[key].count++;
+                aggregation[key].latSum += f.geometry.coordinates[1];
+                aggregation[key].lngSum += f.geometry.coordinates[0];
+            });
+
+            aggregatedPois[level] = {
+                type: 'FeatureCollection',
+                features: Object.values(aggregation).map((item, index) => ({
+                    type: 'Feature',
+                    id: `${level}-${index}`,
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [item.lngSum / item.count, item.latSum / item.count]
+                    },
+                    properties: {
+                        name: item.name,
+                        key: item.key,
+                        count: item.count,
+                        level: level,
+                        isCluster: true
+                    }
+                }))
+            };
+            console.log(`    Aggregated into ${aggregatedPois[level].features.length} ${level}s`);
+        });
+
+        // 保持向下兼容
+        cityAggregatedPois = aggregatedPois['city'];
+
+    } catch (e) {
+        console.warn('  pois.geojson not found or error processing:', e.message);
+        poisData = { type: 'FeatureCollection', features: [] };
+        aggregatedPois = { province: { features: [] }, city: { features: [] }, district: { features: [] } };
+        cityAggregatedPois = aggregatedPois.city;
+    }
+
+    // Initialize tile indexes
+    console.log('  Indexing data for tiles...');
+    cellsIndex = geojsonvt(cellsData, { maxZoom: 20, indexMaxZoom: 5, indexMaxPoints: 100000 });
+    poisIndex = geojsonvt(poisData, { maxZoom: 20, indexMaxZoom: 5, indexMaxPoints: 100000 });
+    console.log('  Tiling complete.');
 }
 
 // 检查点是否在 bbox 内
@@ -158,12 +222,27 @@ app.get('/api/cell/:id', (req, res) => {
     res.json(feature);
 });
 
+// API: 获取 POI 数据（按行政级别聚合）
+app.get('/api/pois/aggregated', (req, res) => {
+    const { level } = req.query; // province, city, district
+    if (aggregatedPois[level]) {
+        res.json(aggregatedPois[level]);
+    } else {
+        res.status(400).json({ error: 'Invalid aggregation level' });
+    }
+});
+
+// API: 获取 POI 数据（按城市聚合） - 保持向下兼容
+app.get('/api/pois/city-clusters', (req, res) => {
+    res.json(cityAggregatedPois);
+});
+
 // API: 获取 POI 数据
 app.get('/api/pois', (req, res) => {
     const { bbox, zoom } = req.query;
     const zoomLevel = parseInt(zoom) || 10;
 
-    if (zoomLevel < zoomConfig.showPOIs) {
+    if (zoomLevel < zoomConfig.poiLevels.detail) {
         return res.json({ type: 'FeatureCollection', features: [] });
     }
 

@@ -195,7 +195,7 @@ function convertPOIs() {
     // 只提取需求中要求的 name 和 ave_survice_pop_change 字段
     const rows = db.prepare(`
     SELECT
-      OBJECTID, name, cityname,
+      OBJECTID, name, pname, pcode, cityname, citycode, adname, adcode,
       ave_survice_pop_change,
       wgs84lon, wgs84lat
     FROM China_city_POI_JS2020
@@ -207,7 +207,12 @@ function convertPOIs() {
         properties: {
             id: row.OBJECTID,
             name: row.name,
+            province: row.pname,
+            province_code: row.pcode,
             city: row.cityname,
+            city_code: row.citycode,
+            district: row.adname,
+            district_code: row.adcode,
             survive_pop_change: row.ave_survice_pop_change
         },
         geometry: {

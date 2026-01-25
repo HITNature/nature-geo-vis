@@ -1,4 +1,14 @@
+import { useState, useRef, useEffect } from 'react';
+
 function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+
+    useEffect(() => {
+        setPosition({ x: 0, y: 0 });
+    }, [feature?.properties?.id]);
+
     if (!feature || !feature.properties) {
         return null;
     }
@@ -6,83 +16,108 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
     const { properties, geometry } = feature;
     const isPOI = geometry && geometry.type === 'Point';
 
+    const handlePointerDown = (e) => {
+        // Only trigger drag if clicking the header (or its children) and NOT a button
+        const header = e.currentTarget.querySelector('.detail-view__header');
+        if (header && header.contains(e.target) && !e.target.closest('button')) {
+            setIsDragging(true);
+            dragStart.current = {
+                x: e.clientX - position.x,
+                y: e.clientY - position.y
+            };
+            e.currentTarget.setPointerCapture(e.pointerId);
+        }
+    };
+
+    const handlePointerMove = (e) => {
+        if (!isDragging) return;
+
+        // Prevent default browser behavior (scrolling, etc.)
+        if (e.cancelable) e.preventDefault();
+
+        setPosition({
+            x: e.clientX - dragStart.current.x,
+            y: e.clientY - dragStart.current.y
+        });
+    };
+
+    const handlePointerUp = (e) => {
+        if (isDragging) {
+            setIsDragging(false);
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+    };
+
     return (
-        <div className="detail-panel">
-            <div className="detail-panel__header">
-                <h2 className="detail-panel__title">
-                    {isPOI ? 'POI 详情' : '网格详情'}
-                </h2>
+        <div
+            className={`glass-panel detail-view ${isDragging ? 'is-dragging' : ''}`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            style={{
+                transform: `translate(${position.x}px, ${position.y}px)`,
+                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                touchAction: 'none' /* Critical for mobile/pointer dragging */
+            }}
+        >
+            <div className="detail-view__header">
+                <div>
+                    <h2 className="detail-view__title">
+                        {properties.name || properties.city || 'Unknown Location'}
+                    </h2>
+                    <div className="detail-view__subtitle">
+                        {isPOI ? 'POI Data Point' : 'Grid Cell Analysis'}
+                        {properties.province && ` • ${properties.province}`}
+                    </div>
+                </div>
                 <button
-                    className="detail-panel__close"
+                    className="detail-view__close-btn"
                     onClick={onClose}
-                    aria-label="关闭"
+                    aria-label="Close"
                 >
-                    ×
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
 
-            <div className="detail-panel__content">
-                {/* 位置信息 */}
-                <div className="detail-panel__location">
-                    <span className="detail-panel__location-icon">
-                        {isPOI ? '📍' : '🔲'}
-                    </span>
-                    <span>{properties.name || properties.city || '未知'}</span>
-                    {properties.province && (
-                        <span style={{ color: 'var(--color-text-muted)' }}>
-                            · {properties.province}
-                        </span>
-                    )}
-                </div>
+            <div className="detail-view__content">
+                <div className="data-grid">
+                    {/* ID Field */}
+                    <div className="data-row">
+                        <span className="data-label">ID REF</span>
+                        <span className="data-value" style={{ opacity: 0.5 }}>{properties.id}</span>
+                    </div>
 
-                {/* 字段列表 */}
-                <div className="field-list">
+                    {/* Dynamic Fields */}
                     {isPOI ? (
-                        // POI 字段
+                        // POI Fields
                         poiDisplayFields && poiDisplayFields.map((field) => (
-                            <div
-                                key={field.key}
-                                className="field-item"
-                                style={{ borderLeftColor: field.color }}
-                            >
-                                <span className="field-item__label">{field.label}</span>
-                                <span className="field-item__value">
+                            <div key={field.key} className="data-row">
+                                <span className="data-label">{field.label}</span>
+                                <span className="data-value">
                                     {properties[field.key] !== undefined && properties[field.key] !== null
                                         ? properties[field.key]
-                                        : '-'}
+                                        : 'N/A'}
                                 </span>
                             </div>
                         ))
                     ) : (
-                        // 网格字段
+                        // Grid Fields
                         displayFields && displayFields.map((field) => (
-                            <div
-                                key={field.key}
-                                className="field-item"
-                                style={{ borderLeftColor: field.color }}
-                            >
-                                <span className="field-item__label">{field.label}</span>
-                                <span className="field-item__value">
+                            <div key={field.key} className="data-row">
+                                <span className="data-label">{field.label}</span>
+                                <span className="data-value">
                                     {properties[field.key] !== undefined && properties[field.key] !== null
                                         ? typeof properties[field.key] === 'number'
                                             ? properties[field.key].toFixed(2)
                                             : properties[field.key]
-                                        : '-'}
+                                        : 'N/A'}
                                 </span>
                             </div>
                         ))
                     )}
-                </div>
-
-                {/* ID 信息 */}
-                <div style={{
-                    marginTop: 'var(--space-lg)',
-                    paddingTop: 'var(--space-md)',
-                    borderTop: '1px solid var(--color-border)',
-                    fontSize: '0.75rem',
-                    color: 'var(--color-text-muted)'
-                }}>
-                    {isPOI ? 'POI' : '网格'} ID: {properties.id}
                 </div>
             </div>
         </div>

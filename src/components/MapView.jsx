@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { useState, useCallback, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
@@ -27,7 +27,7 @@ const poiIcon = new L.Icon({
 });
 
 // 地图事件处理组件
-function MapEvents({ onZoomChange, onMoveEnd }) {
+function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }) {
     const map = useMapEvents({
         zoomend: () => {
             onZoomChange(map.getZoom());
@@ -42,60 +42,185 @@ function MapEvents({ onZoomChange, onMoveEnd }) {
             ].join(',');
             onMoveEnd(bbox, map.getZoom());
         },
+        loading: () => onLoadingChange(true),
+        load: () => onLoadingChange(false),
+        tileloadstart: () => onLoadingChange(true),
+        tileload: () => { }
     });
+
+    // 当详情面板关闭时（selectedFeature 变为 null），关闭地图上的气泡
+    useEffect(() => {
+        if (!selectedFeature) {
+            map.closePopup();
+        }
+    }, [selectedFeature, map]);
+
     return null;
 }
 
-function MapView({ config, onCellClick, onPOIClick, onZoomChange }) {
+function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChange, onLoadingChange }) {
     const [pois, setPois] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [aggregatedData, setAggregatedData] = useState({
+        province: null,
+        city: null,
+        district: null
+    });
     const [currentZoom, setCurrentZoom] = useState(5);
+    const [isDataLoading, setIsDataLoading] = useState(false);
+    const [isMapLoading, setIsMapLoading] = useState(false);
 
-    // 视口变化时加载 POI 数据
+    // Sync combined loading state to parent
+    useEffect(() => {
+        onLoadingChange(isDataLoading || isMapLoading);
+    }, [isDataLoading, isMapLoading, onLoadingChange]);
+
+    // 加载所有级别的聚合数据
+    useEffect(() => {
+        setIsDataLoading(true);
+        const levels = ['province', 'city', 'district'];
+        Promise.all(levels.map(level =>
+            fetch(`/api/pois/aggregated?level=${level}`).then(res => res.json())
+        ))
+            .then(([province, city, district]) => {
+                setAggregatedData({ province, city, district });
+                setIsDataLoading(false);
+            })
+            .catch(err => {
+                console.error('Failed to load aggregated POIs:', err);
+                setIsDataLoading(false);
+            });
+    }, []);
+
+    // 视口变化时加载详细 POI 数据
     const handleMoveEnd = useCallback((bbox, zoom) => {
         setCurrentZoom(zoom);
-
-        // 加载 POI 数据
-        if (config && zoom >= config.zoomConfig.showPOIs) {
+        // 只有在放大到详细级别才加载单个 POI
+        if (config && zoom >= config.zoomConfig.poiLevels.detail) {
+            setIsDataLoading(true);
             fetch(`/api/pois?bbox=${bbox}&zoom=${zoom}`)
                 .then(res => res.json())
-                .then(data => setPois(data))
-                .catch(err => console.error('Failed to load POIs:', err));
+                .then(data => {
+                    setPois(data);
+                    setIsDataLoading(false);
+                })
+                .catch(err => {
+                    console.error('Failed to load POIs:', err);
+                    setIsDataLoading(false);
+                });
         } else {
             setPois(null);
         }
     }, [config]);
 
     const handleZoomChange = useCallback((zoom) => {
-        setCurrentZoom(zoom);
         onZoomChange(zoom);
+        setCurrentZoom(zoom);
     }, [onZoomChange]);
 
+    // 自定义聚合图标
+    const createClusterIcon = (name, count, level) => {
+        const size = Math.min(80, 40 + Math.log10(count) * 10);
+        let color = '#f59e0b'; // Default city (orange)
+        let zoomTo = 10;
+
+        if (level === 'province') {
+            color = '#3b82f6'; // Blue
+            zoomTo = config?.zoomConfig.poiLevels.city || 6;
+        } else if (level === 'district') {
+            color = '#10b981'; // Green
+            zoomTo = config?.zoomConfig.poiLevels.detail || 12;
+        } else {
+            zoomTo = config?.zoomConfig.poiLevels.district || 9;
+        }
+
+        return new L.DivIcon({
+            html: `
+                <div class="city-cluster-marker cluster-${level}" style="width: ${size}px; height: ${size}px; background-color: ${color}33;">
+                    <div class="cluster-content">
+                        <span class="city-name">${name}</span>
+                        <span class="city-count">${count}</span>
+                    </div>
+                </div>
+            `,
+            className: 'custom-city-cluster',
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+        });
+    };
+
+    // 确定当前应该显示的级别
+    let currentLevel = null;
+    if (config) {
+        const { poiLevels } = config.zoomConfig;
+        if (currentZoom >= poiLevels.detail) currentLevel = 'detail';
+        else if (currentZoom >= poiLevels.district) currentLevel = 'district';
+        else if (currentZoom >= poiLevels.city) currentLevel = 'city';
+        else currentLevel = 'province';
+    }
+
+    const showDetailedPOIs = currentLevel === 'detail';
+    const clusterFeatures = currentLevel && currentLevel !== 'detail' ? aggregatedData[currentLevel]?.features : [];
+
     return (
-        <div className="map-container">
-            <MapContainer
-                center={[35.8, 104.1]} // 中国中心
-                zoom={5}
-                style={{ width: '100%', height: '100%' }}
-                zoomControl={true}
-            >
-                <TileLayer
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                />
+        <MapContainer
+            center={[35.8, 104.1]} // 中国中心
+            zoom={5}
+            style={{ width: '100%', height: '100%' }}
+            zoomControl={false}
+            whenReady={() => setIsMapLoading(false)}
+        >
+            <ZoomControl position="bottomright" />
+            <TileLayer
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                eventHandlers={{
+                    loading: () => setIsMapLoading(true),
+                    load: () => setIsMapLoading(false),
+                }}
+            />
 
-                <MapEvents
-                    onZoomChange={handleZoomChange}
-                    onMoveEnd={handleMoveEnd}
-                />
+            <MapEvents
+                onZoomChange={handleZoomChange}
+                onMoveEnd={handleMoveEnd}
+                onLoadingChange={setIsMapLoading}
+                selectedFeature={selectedFeature}
+            />
 
-                {/* POI 标记层 (带聚合) */}
-                <MarkerClusterGroup
-                    chunkedLoading
-                    maxClusterRadius={60}
-                    spiderfyOnMaxZoom={true}
-                >
-                    {pois && pois.features && pois.features.length > 0 && pois.features.map((feature) => {
+            {/* 模式 1: 行政聚合显示 */}
+            {!showDetailedPOIs && clusterFeatures.map((feature, idx) => {
+                const [lng, lat] = feature.geometry.coordinates;
+                const { name, count, level } = feature.properties;
+                return (
+                    <Marker
+                        key={`${level}-${idx}`}
+                        position={[lat, lng]}
+                        icon={createClusterIcon(name, count, level)}
+                        eventHandlers={{
+                            click: (e) => {
+                                const map = e.target._map;
+                                let nextZoom = 10;
+                                if (level === 'province') nextZoom = config?.zoomConfig.poiLevels.city;
+                                else if (level === 'city') nextZoom = config?.zoomConfig.poiLevels.district;
+                                else nextZoom = config?.zoomConfig.poiLevels.detail;
+                                map.setView([lat, lng], nextZoom);
+                            }
+                        }}
+                    >
+                        <Popup eventHandlers={{ remove: onPopupClose }}>
+                            <strong>{name}</strong>
+                            <br />
+                            Level: {level}
+                            <br />
+                            Schools: {count}
+                        </Popup>
+                    </Marker>
+                );
+            })}
+
+            {/* 模式 2: 详细 POI 显示 */}
+            {showDetailedPOIs && (
+                <>
+                    {pois && pois.features && pois.features.map((feature) => {
                         const [lng, lat] = feature.geometry.coordinates;
                         return (
                             <Marker
@@ -110,20 +235,18 @@ function MapView({ config, onCellClick, onPOIClick, onZoomChange }) {
                                     },
                                 }}
                             >
-                                <Popup>
+                                <Popup eventHandlers={{ remove: onPopupClose }}>
                                     <strong>{feature.properties.name}</strong>
-                                    {feature.properties.city && (
-                                        <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                                            {feature.properties.city}
-                                        </div>
-                                    )}
+                                    <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>
+                                        {feature.properties.province} {feature.properties.city} {feature.properties.district}
+                                    </div>
                                 </Popup>
                             </Marker>
                         );
                     })}
-                </MarkerClusterGroup>
-            </MapContainer>
-        </div>
+                </>
+            )}
+        </MapContainer>
     );
 }
 
