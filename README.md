@@ -170,6 +170,13 @@ GET /api/pois?bbox=west,south,east,north&zoom=10
 ```
 获取POI数据，支持视口过滤和缩放级别控制
 
+### 瓦片接口
+
+```
+GET /api/tiles/:layer/:z/:x/:y.json
+```
+获取指定层（`cells` 或 `pois`）在特定缩放级别和坐标下的瓦片数据（GeoJSON格式）。该接口用于支持大规模数据的高性能加载。
+
 **示例请求**：
 ```bash
 curl "http://localhost:3001/api/pois?bbox=103,31,105,33&zoom=10"
@@ -261,15 +268,26 @@ npm run preview
 ### 已实现的优化
 1. **视口过滤**：只加载当前可见区域的数据
 2. **缩放级别控制**：根据缩放级别决定是否加载数据
-3. **服务端缓存**：geodata在服务器启动时一次性加载到内存
-4. **前端按需请求**：地图移动或缩放时动态请求数据
+3. **服务端瓦片索引 (Tile-based)**：利用 `geojson-vt` 在服务端动态生成瓦片索引，支持大数据量的高性能请求
+4. **POI 聚合 (Clustering)**：在前段实现 POI 点的自动聚合显示，解决海量标记导致的视觉拥挤和性能下降
+5. **服务端缓存**：geodata 在服务器启动时一次性加载到内存并建立瓦片索引
+6. **前端按需请求**：地图移动或缩放时动态请求数据
 
 ### 未来可优化方向
-1. 实现tile-based数据分片（如mbtiles）
-2. 添加数据聚合clustering（在低缩放级别合并显示）
-3. 使用Web Workers进行大数据量渲染
-4. 实现虚拟滚动和增量渲染
+1. 使用 Web Workers 进行大数据量渲染
+2. 实现虚拟滚动和增量渲染
 
 ## Roadmap & TODO
 
 短期唯一目标：成功转换国境线、行政区划、网格数据
+
+因为目前 ESRI 几何数据解析情况是
+  - boundaries: 0 条记录转换
+  - cities: 0 条记录转换
+  - cells: 0 条记录转换
+  - POIs: 32231 条记录转换成功（因为 POI 使用的是明文的 wgs84lon/wgs84lat 字段，不依赖 Shape 解析）
+
+已把需求发给数据提供者，等待她用 ArcGIS Pro 将这3个图层分别导出为 GeoJSON 或Shapefile 格式:
+  1. China_city_pl → 导出为 boundaries.geojson
+  2. China_city_pg → 导出为 cities.geojson
+  3. China_city_cell → 导出为 cells.geojson

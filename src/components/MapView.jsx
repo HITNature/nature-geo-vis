@@ -1,7 +1,10 @@
 import { useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 // 修复 Leaflet 默认图标问题
 delete L.Icon.Default.prototype._getIconUrl;
@@ -86,33 +89,39 @@ function MapView({ config, onCellClick, onPOIClick, onZoomChange }) {
                     onMoveEnd={handleMoveEnd}
                 />
 
-                {/* POI 标记层 */}
-                {pois && pois.features && pois.features.length > 0 && pois.features.map((feature) => {
-                    const [lng, lat] = feature.geometry.coordinates;
-                    return (
-                        <Marker
-                            key={feature.properties.id}
-                            position={[lat, lng]}
-                            icon={poiIcon}
-                            eventHandlers={{
-                                click: () => {
-                                    if (onPOIClick) {
-                                        onPOIClick(feature);
-                                    }
-                                },
-                            }}
-                        >
-                            <Popup>
-                                <strong>{feature.properties.name}</strong>
-                                {feature.properties.city && (
-                                    <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                                        {feature.properties.city}
-                                    </div>
-                                )}
-                            </Popup>
-                        </Marker>
-                    );
-                })}
+                {/* POI 标记层 (带聚合) */}
+                <MarkerClusterGroup
+                    chunkedLoading
+                    maxClusterRadius={60}
+                    spiderfyOnMaxZoom={true}
+                >
+                    {pois && pois.features && pois.features.length > 0 && pois.features.map((feature) => {
+                        const [lng, lat] = feature.geometry.coordinates;
+                        return (
+                            <Marker
+                                key={feature.properties.id}
+                                position={[lat, lng]}
+                                icon={poiIcon}
+                                eventHandlers={{
+                                    click: () => {
+                                        if (onPOIClick) {
+                                            onPOIClick(feature);
+                                        }
+                                    },
+                                }}
+                            >
+                                <Popup>
+                                    <strong>{feature.properties.name}</strong>
+                                    {feature.properties.city && (
+                                        <div style={{ fontSize: '0.875rem', color: '#666' }}>
+                                            {feature.properties.city}
+                                        </div>
+                                    )}
+                                </Popup>
+                            </Marker>
+                        );
+                    })}
+                </MarkerClusterGroup>
             </MapContainer>
         </div>
     );

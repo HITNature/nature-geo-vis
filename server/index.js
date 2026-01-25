@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { displayFields, poiDisplayFields, zoomConfig, serverConfig } from './config.js';
+import geojsonvt from 'geojson-vt';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '..', 'data');
@@ -17,6 +18,10 @@ let boundariesData = null;
 let citiesData = null;
 let cellsData = null;
 let poisData = null;
+
+// Tile indexes
+let cellsIndex = null;
+let poisIndex = null;
 
 function loadData() {
     console.log('Loading GeoJSON data...');
@@ -45,13 +50,19 @@ function loadData() {
         cellsData = { type: 'FeatureCollection', features: [] };
     }
 
-    try {
-        poisData = JSON.parse(fs.readFileSync(path.join(dataDir, 'pois.geojson'), 'utf-8'));
-        console.log(`  Loaded ${poisData.features.length} POIs`);
-    } catch (e) {
-        console.warn('  pois.geojson not found');
-        poisData = { type: 'FeatureCollection', features: [] };
-    }
+        try {
+            poisData = JSON.parse(fs.readFileSync(path.join(dataDir, 'pois.geojson'), 'utf-8'));
+            console.log(`  Loaded ${poisData.features.length} POIs`);
+        } catch (e) {
+            console.warn('  pois.geojson not found');
+            poisData = { type: 'FeatureCollection', features: [] };
+        }
+
+        // Initialize tile indexes
+        console.log('  Indexing data for tiles...');
+        cellsIndex = geojsonvt(cellsData, { maxZoom: 20, indexMaxZoom: 5, indexMaxPoints: 100000 });
+        poisIndex = geojsonvt(poisData, { maxZoom: 20, indexMaxZoom: 5, indexMaxPoints: 100000 });
+        console.log('  Tiling complete.');
 }
 
 // 检查点是否在 bbox 内
@@ -168,6 +179,50 @@ app.get('/api/pois', (req, res) => {
     }
 
     res.json(poisData);
+});
+
+// API: 获取瓦片数据
+app.get('/api/tiles/:layer/:z/:x/:y.json', (req, res) => {
+    const { layer, z, x, y } = req.params;
+    const zoom = parseInt(z);
+    const tileX = parseInt(x);
+    const tileY = parseInt(y);
+
+    let index = null;
+    if (layer === 'cells') index = cellsIndex;
+    else if (layer === 'pois') index = poisIndex;
+
+    if (!index) {
+        return res.status(404).json({ error: 'Layer not found' });
+    }
+
+    const tile = index.getTile(zoom, tileX, tileY);
+
+    if (!tile) {
+        return res.json({ type: 'FeatureCollection', features: [] });
+    }
+
+    // Convert geojson-vt tile to standard GeoJSON
+    const features = tile.features.map(f => {
+        let geometryType;
+        if (f.type === 1) geometryType = 'Point';
+        else if (f.type === 2) geometryType = 'LineString';
+        else if (f.type === 3) geometryType = 'Polygon';
+
+        return {
+            type: 'Feature',
+            geometry: {
+                type: geometryType,
+                coordinates: f.geometry
+            },
+            properties: f.tags
+        };
+    });
+
+    res.json({
+        type: 'FeatureCollection',
+        features: features
+    });
 });
 
 // 启动服务器
