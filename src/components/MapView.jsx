@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
+import { perf } from '../utils/perf';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -77,6 +78,7 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
     // 加载所有级别的聚合数据
     useEffect(() => {
         setIsDataLoading(true);
+        const endMeasure = perf.startMeasure('Load Aggr Data');
         const levels = ['province', 'city', 'district'];
         Promise.all(levels.map(level =>
             fetch(`/api/pois/aggregated?level=${level}`).then(res => res.json())
@@ -84,10 +86,12 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
             .then(([province, city, district]) => {
                 setAggregatedData({ province, city, district });
                 setIsDataLoading(false);
+                endMeasure();
             })
             .catch(err => {
                 console.error('Failed to load aggregated POIs:', err);
                 setIsDataLoading(false);
+                endMeasure();
             });
     }, []);
 
@@ -97,18 +101,23 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
         // 只有在放大到详细级别才加载单个 POI
         if (config && zoom >= config.zoomConfig.poiLevels.detail) {
             setIsDataLoading(true);
+            const endMeasure = perf.startMeasure('Fetch Detailed POIs');
             fetch(`/api/pois?bbox=${bbox}&zoom=${zoom}`)
                 .then(res => res.json())
                 .then(data => {
                     setPois(data);
                     setIsDataLoading(false);
+                    endMeasure();
+                    perf.setCount('Markers (Detail)', data.features?.length || 0);
                 })
                 .catch(err => {
                     console.error('Failed to load POIs:', err);
                     setIsDataLoading(false);
+                    endMeasure();
                 });
         } else {
             setPois(null);
+            perf.setCount('Markers (Detail)', 0);
         }
     }, [config]);
 
@@ -160,6 +169,14 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
 
     const showDetailedPOIs = currentLevel === 'detail';
     const clusterFeatures = currentLevel && currentLevel !== 'detail' ? aggregatedData[currentLevel]?.features : [];
+
+    useEffect(() => {
+        if (!showDetailedPOIs) {
+            perf.setCount('Cluster Nodes', clusterFeatures?.length || 0);
+        } else {
+            perf.setCount('Cluster Nodes', 0);
+        }
+    }, [clusterFeatures, showDetailedPOIs]);
 
     return (
         <MapContainer

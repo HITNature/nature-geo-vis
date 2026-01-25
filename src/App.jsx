@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import DetailPanel from './components/DetailPanel';
+import PerformanceMonitor from './components/PerformanceMonitor';
 
 function App() {
     const [config, setConfig] = useState(null);
@@ -51,6 +52,7 @@ function App() {
 
             {/* Layer 2: UI Overlay (Foreground) */}
             <div className="ui-layer">
+                <PerformanceMonitor />
                 {/* Header / Status Bar */}
                 <header className="params-bar">
                     <div className="brand">
