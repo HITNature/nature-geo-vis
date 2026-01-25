@@ -360,6 +360,34 @@ code,
   font-family: 'Inter', sans-serif !important;
 }
 
+/* Tile Loading Optimization */
+.leaflet-tile-container {
+  /* Hardware acceleration for smoother panning */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.leaflet-tile {
+  /* Smooth fade-in for tiles */
+  opacity: 0;
+  transition: opacity 0.25s ease-in-out;
+}
+
+.leaflet-tile-loaded {
+  opacity: 1;
+}
+
+/* Reduce visual jitter during zoom */
+.leaflet-zoom-animated {
+  will-change: transform;
+}
+
+/* Optimize tile pane for performance */
+.leaflet-tile-pane {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
 .leaflet-control-zoom {
   border: none !important;
   box-shadow: var(--shadow-md) !important;
@@ -520,4 +548,25 @@ code,
 .city-count {
   font-size: 11px;
   opacity: 0.8;
+}
+
+/* ===== POI Tooltip (Canvas Markers) ===== */
+.poi-tooltip {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 6px 10px !important;
+  font-size: 0.8rem !important;
+  box-shadow: var(--shadow-md) !important;
+  white-space: nowrap;
+}
+
+.poi-tooltip::before {
+  border-top-color: var(--color-bg-elevated) !important;
+}
+
+/* Leaflet tooltip arrow fix */
+.leaflet-tooltip-top:before {
+  border-top-color: var(--color-bg-elevated) !important;
 }

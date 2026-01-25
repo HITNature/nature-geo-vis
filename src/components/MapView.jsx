@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl } fro
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { perf } from '../utils/perf';
+import CanvasMarkerLayer from './CanvasMarkerLayer';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -30,8 +31,16 @@ const poiIcon = new L.Icon({
 // 地图事件处理组件
 function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }) {
     const map = useMapEvents({
+        zoomstart: () => {
+            perf.addHistory('Zoom animation started');
+            perf.startMeasure('Zoom Animation')();
+        },
         zoomend: () => {
             onZoomChange(map.getZoom());
+            perf.addHistory(`Zoom ended at level ${map.getZoom()}`);
+        },
+        movestart: () => {
+            perf.addHistory('Map move started');
         },
         moveend: () => {
             const bounds = map.getBounds();
@@ -43,10 +52,20 @@ function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }
             ].join(',');
             onMoveEnd(bbox, map.getZoom());
         },
-        loading: () => onLoadingChange(true),
-        load: () => onLoadingChange(false),
-        tileloadstart: () => onLoadingChange(true),
-        tileload: () => { }
+        tileloadstart: () => {
+            onLoadingChange(true);
+            perf.setCount('Tiles Loading', (perf.getMetrics().counts['Tiles Loading'] || 0) + 1);
+        },
+        tileload: () => {
+            const loading = (perf.getMetrics().counts['Tiles Loading'] || 1) - 1;
+            perf.setCount('Tiles Loading', Math.max(0, loading));
+            if (loading <= 0) {
+                onLoadingChange(false);
+            }
+        },
+        tileerror: () => {
+            perf.addHistory('Tile load error!');
+        }
     });
 
     // 当详情面板关闭时（selectedFeature 变为 null），关闭地图上的气泡
@@ -59,8 +78,17 @@ function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }
     return null;
 }
 
-function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChange, onLoadingChange }) {
+function MapView({ config, selectedFeature, useWorker = false, onPOIClick, onPopupClose, onZoomChange, onLoadingChange }) {
     const [pois, setPois] = useState(null);
+    const [worker, setWorker] = useState(null);
+
+    // Initialize worker
+    useEffect(() => {
+        const dataWorker = new Worker(new URL('../workers/data-worker.js', import.meta.url), { type: 'module' });
+        setWorker(dataWorker);
+        return () => dataWorker.terminate();
+    }, []);
+
     const [aggregatedData, setAggregatedData] = useState({
         province: null,
         city: null,
@@ -101,25 +129,42 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
         // 只有在放大到详细级别才加载单个 POI
         if (config && zoom >= config.zoomConfig.poiLevels.detail) {
             setIsDataLoading(true);
-            const endMeasure = perf.startMeasure('Fetch Detailed POIs');
-            fetch(`/api/pois?bbox=${bbox}&zoom=${zoom}`)
-                .then(res => res.json())
-                .then(data => {
-                    setPois(data);
-                    setIsDataLoading(false);
-                    endMeasure();
-                    perf.setCount('Markers (Detail)', data.features?.length || 0);
-                })
-                .catch(err => {
-                    console.error('Failed to load POIs:', err);
-                    setIsDataLoading(false);
-                    endMeasure();
-                });
+            const experimentId = useWorker ? 'Web Worker' : 'Main Thread';
+            const endMeasure = perf.startMeasure('Fetch Detailed POIs', experimentId);
+            const url = `/api/pois?bbox=${bbox}&zoom=${zoom}`;
+
+            if (useWorker && worker) {
+                const requestId = Date.now();
+                worker.onmessage = (e) => {
+                    if (e.data.requestId === requestId && e.data.type === 'FETCH_POIS_SUCCESS') {
+                        setPois(e.data.data);
+                        setIsDataLoading(false);
+                        endMeasure();
+                        perf.setCount('Markers (Detail)', e.data.data.features?.length || 0);
+                        perf.addHistory(`Worker fetched ${e.data.data.features?.length} points in ${e.data.workerDuration.toFixed(2)}ms`);
+                    }
+                };
+                worker.postMessage({ type: 'FETCH_POIS', url, requestId });
+            } else {
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        setPois(data);
+                        setIsDataLoading(false);
+                        endMeasure();
+                        perf.setCount('Markers (Detail)', data.features?.length || 0);
+                    })
+                    .catch(err => {
+                        console.error('Failed to load POIs:', err);
+                        setIsDataLoading(false);
+                        endMeasure();
+                    });
+            }
         } else {
             setPois(null);
             perf.setCount('Markers (Detail)', 0);
         }
-    }, [config]);
+    }, [config, useWorker, worker]);
 
     const handleZoomChange = useCallback((zoom) => {
         onZoomChange(zoom);
@@ -170,6 +215,12 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
     const showDetailedPOIs = currentLevel === 'detail';
     const clusterFeatures = currentLevel && currentLevel !== 'detail' ? aggregatedData[currentLevel]?.features : [];
 
+    // Track render count
+    useEffect(() => {
+        const renderCount = (perf.getMetrics().counts['React Renders'] || 0) + 1;
+        perf.setCount('React Renders', renderCount);
+    });
+
     useEffect(() => {
         if (!showDetailedPOIs) {
             perf.setCount('Cluster Nodes', clusterFeatures?.length || 0);
@@ -177,6 +228,20 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
             perf.setCount('Cluster Nodes', 0);
         }
     }, [clusterFeatures, showDetailedPOIs]);
+
+    // Track marker render timing
+    useEffect(() => {
+        if (showDetailedPOIs && pois?.features?.length > 0) {
+            perf.addHistory(`Rendering ${pois.features.length} DOM markers...`);
+            const endMeasure = perf.startMeasure('DOM Marker Render');
+            // The actual render happens after this effect, so we use requestAnimationFrame
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    endMeasure();
+                });
+            });
+        }
+    }, [pois, showDetailedPOIs]);
 
     return (
         <MapContainer
@@ -190,6 +255,14 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
             <TileLayer
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                // Performance optimizations
+                keepBuffer={4}              // Keep 4 tiles outside viewport in memory
+                updateWhenZooming={false}   // Don't update during zoom animation
+                updateWhenIdle={true}       // Only update when map is idle
+                maxNativeZoom={18}          // Max zoom level of tiles
+                maxZoom={20}                // Allow zooming beyond native
+                tileSize={256}              // Standard tile size
+                crossOrigin="anonymous"     // Enable CORS for caching
                 eventHandlers={{
                     loading: () => setIsMapLoading(true),
                     load: () => setIsMapLoading(false),
@@ -234,35 +307,12 @@ function MapView({ config, selectedFeature, onPOIClick, onPopupClose, onZoomChan
                 );
             })}
 
-            {/* 模式 2: 详细 POI 显示 */}
-            {showDetailedPOIs && (
-                <>
-                    {pois && pois.features && pois.features.map((feature) => {
-                        const [lng, lat] = feature.geometry.coordinates;
-                        return (
-                            <Marker
-                                key={feature.properties.id}
-                                position={[lat, lng]}
-                                icon={poiIcon}
-                                eventHandlers={{
-                                    click: () => {
-                                        if (onPOIClick) {
-                                            onPOIClick(feature);
-                                        }
-                                    },
-                                }}
-                            >
-                                <Popup eventHandlers={{ remove: onPopupClose }}>
-                                    <strong>{feature.properties.name}</strong>
-                                    <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>
-                                        {feature.properties.province} {feature.properties.city} {feature.properties.district}
-                                    </div>
-                                </Popup>
-                            </Marker>
-                        );
-                    })}
-                </>
-            )}
+            {/* 模式 2: 详细 POI 显示 - Canvas-based for performance */}
+            <CanvasMarkerLayer
+                pois={pois}
+                visible={showDetailedPOIs}
+                onPOIClick={onPOIClick}
+            />
         </MapContainer>
     );
 }

@@ -41,6 +41,12 @@
    - POI点击查看详情功能
    - 响应式设计和现代化UI
 
+4. **性能优化**
+   - Web Worker 后台数据处理（6倍性能提升）
+   - Canvas 渲染替代 DOM Marker（FPS 从 <10 提升至 60+）
+   - 实时性能监控面板（左上角 PERF MONITOR）
+   - 地图瓦片加载优化（预加载、平滑过渡）
+
 ###  待解决问题
 
 **数据编码问题**：geodatabase中的大部分表（国境线、行政区划、网格数据）在转换过程中遇到编码问题，导致转换失败。目前只有POI数据成功转换。
@@ -72,6 +78,8 @@
 - **Vite** - 构建工具和开发服务器
 - **Leaflet** - 开源地图库
 - **react-leaflet** - Leaflet的React封装
+- **Web Workers** - 后台数据处理
+- **Canvas API** - 高性能点位渲染
 
 ### 数据格式
 - **GeoJSON** - 地理数据交换格式
@@ -86,13 +94,21 @@ nature-geo-vis/
 │   ├── cities.geojson         # 城市边界（TODO）
 │   ├── cells.geojson          # 网格数据（TODO）
 │   └── pois.geojson           # POI数据 ✓
+├── docs/                       # 技术文档
+│   └── PERFORMANCE.md         # 性能优化技术文档 ✓
 ├── server/                    # 后端服务
 │   ├── index.js              # Express服务器主文件
 │   └── config.js             # 服务器配置
 ├── src/                       # 前端源码
 │   ├── components/           # React组件
 │   │   ├── MapView.jsx      # 地图视图组件
-│   │   └── DetailPanel.jsx  # 详情面板组件
+│   │   ├── DetailPanel.jsx  # 详情面板组件
+│   │   ├── CanvasMarkerLayer.jsx  # Canvas渲染层 ✓
+│   │   └── PerformanceMonitor.jsx # 性能监控面板 ✓
+│   ├── utils/                # 工具函数
+│   │   └── perf.js          # 性能追踪工具 ✓
+│   ├── workers/              # Web Workers
+│   │   └── data-worker.js   # 数据处理Worker ✓
 │   ├── App.jsx              # 主应用组件
 │   ├── main.jsx             # 应用入口
 │   └── index.css            # 全局样式
@@ -105,6 +121,7 @@ nature-geo-vis/
 └── vite.config.js           # Vite配置
 
 ```
+
 
 ## 快速开始
 
@@ -298,9 +315,22 @@ npm run preview
    - **视口动态切换**：地图根据缩放级别自动切换统计口径。低缩放 (Zoom 0-7) 展示省级规模，中缩放 (Zoom 8-10) 展示地级市规模，高缩放 (Zoom 11-12) 精细至区县，最高缩放 (Zoom 13+) 渲染具体学校点位。
    - **拟态视觉设计**：聚合点采用极简的半透明圆圈设计（20% 不透明度），移除硬朗边框，将行政区名与统计数字垂直整合于圆圈内部，实现了“信息即设计”的现代观感。
 
+### 已完成的性能优化
+
+> 💡 **详细技术文档**：查看 [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) 了解完整的性能分析、优化方案和基准测试结果。
+
+1. **Web Worker 数据处理** (`src/workers/data-worker.js`)：将 `fetch` + JSON 解析移入后台线程，主线程数据处理耗时从 ~122ms 降至 ~19ms（约 6 倍提升）
+2. **Canvas 渲染替代 DOM Marker** (`src/components/CanvasMarkerLayer.jsx`)：使用 Leaflet Canvas Renderer 绘制所有 POI，DOM 节点从数千个降至 1 个 Canvas，FPS 保持 60+
+3. **细粒度性能监控** (`src/utils/perf.js`)：实时追踪 FPS、Tiles Loading、React Renders、Canvas Markers 等关键指标
+4. **地图瓦片优化** (`src/components/MapView.jsx` + `src/index.css`)：
+   - 瓦片预加载（keepBuffer）减少重复请求
+   - 缩放时禁用更新避免抖动
+   - CSS 硬件加速和平滑过渡
+
 ### 未来可优化方向
-1. 使用 Web Workers 进行大数据量渲染
-2. 实现虚拟滚动和增量渲染
+1. 实现虚拟滚动和增量渲染
+2. 采用矢量瓦片 (MVT) 或二进制传输 (Protobuf)
+
 
 #### 性能开销分布梳理
 
@@ -310,15 +340,16 @@ npm run preview
 | **网络传输**     | **网络 (Network)**         | 带宽 / 延迟    | **GeoJSON 传输量：**  采用标准的文本格式传输。对于详细 POI，如果视口内有数千个点，返回的 JSON 体积（包含属性字段）会达到数 MB，导致排队等待和下载延迟。                                                  |
 | **聚类计算**     | **服务端 / 前端**         | 计算能力 (CPU) | **预处理模式：**  目前行政级别的聚合（省/市/区）是在**服务端启动时预计算**好的，请求时直接返回，所以运行时开销极低。但如果未来引入动态聚类，开销将显著增加。                                                               |
 | **地图渲染**     | **前端 (Browser)**         | GPU / 内存     | **Canvas/SVG 绘制：**  地图底图瓦片由浏览器 GPU 渲染。行政边界（Boundaries）作为矢量路径渲染，路径节点越多，渲染压力越大。                                                                                |
-| **数据点渲染**     | **前端 (Browser)**         | **DOM / 主线程**               | **DOM 爆炸：**  当前 POI 渲染使用的是标准的 Leaflet Marker（即每一个点都是一个 DOM 节点）。当点数超过 500-1000 个时，页面滚动和缩放会产生明显卡顿（Jank），因为浏览器需要维护和重绘大量 DOM 元素。 |
+| **数据点渲染**     | **前端 (Browser)**         | **Canvas (已优化)**               | **Canvas 渲染（已优化）：** 使用 Leaflet Canvas Renderer (`L.circleMarker`) 替代 DOM Marker，所有点统一绘制在同一 Canvas 上，彻底消除 DOM 爆炸问题，FPS 保持 60+。 |
 
 ---
 
 #### 系统当前性能瓶颈分析
 
-1. **前端瓶颈 (最严重)** ：**数据点渲染**。由于使用了 DOM Marker，当缩放到详细级别时，主线程通过 React 渲染大量组件并映射到 DOM，是卡顿的主要来源。
+1. ~~**前端瓶颈 (最严重)**~~ **已解决**：通过 Canvas 渲染替代 DOM Marker，数据点渲染不再是瓶颈。
 2. **网络瓶颈**：**数据量过大**。直接请求大批量的 GeoJSON 特征点，没有采用二进制格式（如 Protocol Buffers）或矢量瓦片（MVT）。
 3. **服务端瓶颈**：**内存溢出风险**。全量加载 1.2亿+ 的原始数据（虽然目前只是一部分）会导致内存占用极高。
+
 
 #### 基础设施已就绪
 

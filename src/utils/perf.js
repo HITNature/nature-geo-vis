@@ -5,9 +5,10 @@ class PerfTracker {
     constructor() {
         this.metrics = {
             fps: 0,
-            loadTimes: {}, // key: duration
+            loadTimes: {}, // key: last duration
             counts: {},    // key: number
-            history: []     // Recent events
+            history: [],   // Recent events
+            benchmarks: {} // key: { samples: [], avg, min, max }
         };
         this.listeners = new Set();
         this._lastTime = performance.now();
@@ -33,11 +34,23 @@ class PerfTracker {
         requestAnimationFrame(loop);
     }
 
-    startMeasure(name) {
+    startMeasure(name, experimentId = null) {
         const start = performance.now();
         return () => {
             const duration = performance.now() - start;
             this.metrics.loadTimes[name] = duration.toFixed(2);
+
+            // Record to benchmark if requested
+            if (experimentId) {
+                const benchKey = `${name} (${experimentId})`;
+                if (!this.metrics.benchmarks[benchKey]) {
+                    this.metrics.benchmarks[benchKey] = { samples: [], avg: 0 };
+                }
+                const bench = this.metrics.benchmarks[benchKey];
+                bench.samples.push(duration);
+                bench.avg = (bench.samples.reduce((a, b) => a + b, 0) / bench.samples.length).toFixed(2);
+            }
+
             this.addHistory(`Task ${name} took ${duration.toFixed(2)}ms`);
             this.notify();
         };

@@ -7,6 +7,7 @@ function App() {
     const [config, setConfig] = useState(null);
     const [selectedFeature, setSelectedFeature] = useState(null);
     const [zoom, setZoom] = useState(5);
+    const [useWorker, setUseWorker] = useState(false);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -43,6 +44,7 @@ function App() {
                 <MapView
                     config={config}
                     selectedFeature={selectedFeature}
+                    useWorker={useWorker}
                     onPOIClick={handlePOIClick}
                     onPopupClose={handleClosePanel}
                     onZoomChange={handleZoomChange}
@@ -52,7 +54,7 @@ function App() {
 
             {/* Layer 2: UI Overlay (Foreground) */}
             <div className="ui-layer">
-                <PerformanceMonitor />
+                <PerformanceMonitor useWorker={useWorker} onToggleWorker={() => setUseWorker(!useWorker)} />
                 {/* Header / Status Bar */}
                 <header className="params-bar">
                     <div className="brand">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { perf } from '../utils/perf';
 
-const PerformanceMonitor = () => {
+const PerformanceMonitor = ({ useWorker, onToggleWorker }) => {
     const [metrics, setMetrics] = useState(perf.getMetrics());
     const [isVisible, setIsVisible] = useState(true);
 
@@ -42,7 +42,9 @@ const PerformanceMonitor = () => {
             top: '80px',
             left: '20px',
             zIndex: 9999,
-            width: '240px',
+            width: '280px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
             padding: '16px',
             fontSize: '12px',
             fontFamily: 'monospace',
@@ -65,15 +67,79 @@ const PerformanceMonitor = () => {
                 >×</button>
             </div>
 
+            {/* Optimization Toggle */}
+            <div style={{
+                background: 'rgba(56, 189, 248, 0.1)',
+                padding: '8px',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                border: '1px solid rgba(56, 189, 248, 0.2)'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 'bold' }}>WEB WORKER</span>
+                    <label className="switch" style={{ position: 'relative', display: 'inline-block', width: '32px', height: '18px' }}>
+                        <input
+                            type="checkbox"
+                            checked={useWorker}
+                            onChange={onToggleWorker}
+                            style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                            position: 'absolute',
+                            cursor: 'pointer',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: useWorker ? '#38bdf8' : '#334155',
+                            transition: '.4s',
+                            borderRadius: '18px'
+                        }}>
+                            <span style={{
+                                position: 'absolute',
+                                height: '14px',
+                                width: '14px',
+                                left: useWorker ? '16px' : '2px',
+                                bottom: '2px',
+                                backgroundColor: 'white',
+                                transition: '.4s',
+                                borderRadius: '50%'
+                            }}></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>FPS</span>
+                    <span>Main Thread FPS</span>
                     <span style={{ color: metrics.fps > 45 ? '#10b981' : metrics.fps > 20 ? '#f59e0b' : '#ef4444' }}>
                         {metrics.fps}
                     </span>
                 </div>
 
                 <div className="perf-divider" style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+
+                {/* Benchmarks / Comparison */}
+                {Object.keys(metrics.benchmarks).length > 0 && (
+                    <>
+                        <div style={{ fontSize: '10px', color: '#38bdf8', margin: '8px 0 4px 0', fontWeight: 'bold' }}>BENCHMARKS (AVG)</div>
+                        {Object.entries(metrics.benchmarks).map(([key, data]) => (
+                            <div key={key} style={{ marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
+                                    <span style={{ fontSize: '10px' }}>{key}</span>
+                                    <span style={{ color: '#94a3b8' }}>{data.avg}ms</span>
+                                </div>
+                                <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '2px' }}>
+                                    <div style={{
+                                        height: '100%',
+                                        width: `${Math.min(100, (parseFloat(data.avg) / 1000) * 100)}%`,
+                                        background: key.includes('Worker') ? '#10b981' : '#3b82f6',
+                                        borderRadius: '2px'
+                                    }} />
+                                </div>
+                            </div>
+                        ))}
+                        <div className="perf-divider" style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
+                    </>
+                )}
 
                 {Object.entries(metrics.loadTimes).map(([name, time]) => (
                     <div key={name} style={{ display: 'flex', justifyContent: 'space-between' }}>
