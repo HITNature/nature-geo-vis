@@ -34,8 +34,13 @@ export const zoomConfig = {
 
 /**
  * 服务器配置
+ * 支持通过环境变量配置，便于部署
  */
 export const serverConfig = {
-    port: 3001,
-    corsOrigin: '*',
+    // Railway/Render 会通过 PORT 环境变量分配端口
+    port: process.env.PORT || 3001,
+
+    // CORS 配置：生产环境应指定前端域名，开发环境使用通配符
+    // 示例：export FRONTEND_URL=https://your-frontend.vercel.app
+    corsOrigin: process.env.FRONTEND_URL || '*',
 };

@@ -345,6 +345,28 @@ code,
   align-items: center;
   gap: var(--space-sm);
   font-size: 0.85rem;
+  margin-bottom: var(--space-xs);
+}
+
+.legend-item:last-child {
+  margin-bottom: 0;
+}
+
+.legend-toggle {
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.legend-toggle:last-of-type {
+  margin-bottom: var(--space-sm);
+}
+
+.legend-marker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
 }
 
 .legend-dot {
@@ -352,6 +374,100 @@ code,
   height: 10px;
   border-radius: 50%;
   box-shadow: 0 0 8px currentColor;
+  transition: all var(--transition-fast);
+}
+
+/* Toggle Button */
+.toggle-btn {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.toggle-btn:hover {
+  background: rgba(148, 163, 184, 0.3);
+  border-color: var(--color-border-hover);
+}
+
+.toggle-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform var(--transition-normal);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-btn.active .toggle-slider {
+  transform: translateX(18px);
+}
+
+/* Grid Sample */
+.legend-grid-sample {
+  display: grid;
+  grid-template-columns: repeat(4, 8px);
+  gap: 2px;
+  transition: opacity var(--transition-fast);
+}
+
+.grid-cell {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Legend Description */
+.legend-description {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.legend-subtitle {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-dim);
+  margin-bottom: var(--space-xs);
+  font-weight: 500;
+}
+
+.legend-item-small {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.legend-item-small:last-child {
+  margin-bottom: 0;
+}
+
+.legend-color {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 /* Leaflet Customization */
@@ -569,4 +685,105 @@ code,
 /* Leaflet tooltip arrow fix */
 .leaflet-tooltip-top:before {
   border-top-color: var(--color-bg-elevated) !important;
+}
+
+/* ===== City Tooltip ===== */
+.city-tooltip {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 6px 12px !important;
+  font-size: 0.85rem !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ===== Cell Popup ===== */
+.cell-popup {
+  min-width: 220px;
+}
+
+.cell-popup h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+}
+
+.cell-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 4px 0;
+}
+
+.stat-row span:first-child {
+  color: var(--color-text-muted);
+}
+
+.stat-row span:last-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+
+.stat-row .positive {
+  color: var(--color-success);
+}
+
+.stat-row .negative {
+  color: var(--color-error);
+}
+
+/* ===== Grid Legend (for cells layer) ===== */
+.grid-legend {
+  position: absolute;
+  bottom: calc(var(--space-lg) + 60px);
+  left: var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
+  z-index: 500;
+}
+
+.grid-legend-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+  font-weight: 600;
+}
+
+.grid-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grid-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.grid-legend-color {
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+/* ===== Boundary Lines ===== */
+.leaflet-interactive.boundary-line {
+  stroke: #ff6b6b;
+  stroke-dasharray: 5, 5;
 }

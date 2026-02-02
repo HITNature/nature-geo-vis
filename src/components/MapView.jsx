@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { perf } from '../utils/perf';
+import { apiFetch } from '../utils/api';
 import CanvasMarkerLayer from './CanvasMarkerLayer';
+import OffscreenCanvasLayer from './OffscreenCanvasLayer';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -27,6 +29,42 @@ const poiIcon = new L.Icon({
     iconAnchor: [12, 12],
     popupAnchor: [0, -12],
 });
+
+// 边界线样式
+const boundaryStyle = {
+    color: '#ff6b6b',
+    weight: 2,
+    opacity: 0.8,
+    dashArray: '5, 5'
+};
+
+// 行政区划样式
+const cityStyle = (feature) => ({
+    color: '#4ecdc4',
+    weight: 1,
+    fillColor: '#4ecdc4',
+    fillOpacity: 0.1,
+    opacity: 0.6
+});
+
+// 网格样式
+const cellStyle = (feature) => {
+    // 根据人口变化显示不同颜色
+    const change = feature.properties?.wpop_change || 0;
+    let fillColor = '#888888';
+    if (change > 500) fillColor = '#22c55e';      // 增长大
+    else if (change > 0) fillColor = '#84cc16';   // 小幅增长
+    else if (change > -500) fillColor = '#f59e0b'; // 小幅减少
+    else fillColor = '#ef4444';                    // 大幅减少
+
+    return {
+        color: '#ffffff',
+        weight: 0.5,
+        fillColor: fillColor,
+        fillOpacity: 0.4,
+        opacity: 0.3
+    };
+};
 
 // 地图事件处理组件
 function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }) {
@@ -78,16 +116,22 @@ function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }
     return null;
 }
 
-function MapView({ config, selectedFeature, useWorker = false, onPOIClick, onPopupClose, onZoomChange, onLoadingChange }) {
+function MapView({
+    config,
+    selectedFeature,
+    useOffscreen = false,
+    onPOIClick,
+    onPopupClose,
+    onZoomChange,
+    onLoadingChange,
+    showGrid = true,
+    showPOI = true
+}) {
     const [pois, setPois] = useState(null);
-    const [worker, setWorker] = useState(null);
-
-    // Initialize worker
-    useEffect(() => {
-        const dataWorker = new Worker(new URL('../workers/data-worker.js', import.meta.url), { type: 'module' });
-        setWorker(dataWorker);
-        return () => dataWorker.terminate();
-    }, []);
+    const [boundaries, setBoundaries] = useState(null);
+    const [cities, setCities] = useState(null);
+    const [cells, setCells] = useState(null);
+    const [selectedCell, setSelectedCell] = useState(null);
 
     const [aggregatedData, setAggregatedData] = useState({
         province: null,
@@ -103,13 +147,38 @@ function MapView({ config, selectedFeature, useWorker = false, onPOIClick, onPop
         onLoadingChange(isDataLoading || isMapLoading);
     }, [isDataLoading, isMapLoading, onLoadingChange]);
 
+    // 加载静态图层数据（国境线和行政区划）
+    useEffect(() => {
+        // 加载国境线
+        apiFetch('/api/boundaries')
+            .then(res => res.json())
+            .then(data => {
+                if (data.features && data.features.length > 0) {
+                    setBoundaries(data);
+                    console.log(`Loaded ${data.features.length} boundary lines`);
+                }
+            })
+            .catch(err => console.error('Failed to load boundaries:', err));
+
+        // 加载行政区划
+        apiFetch('/api/cities')
+            .then(res => res.json())
+            .then(data => {
+                if (data.features && data.features.length > 0) {
+                    setCities(data);
+                    console.log(`Loaded ${data.features.length} city areas`);
+                }
+            })
+            .catch(err => console.error('Failed to load cities:', err));
+    }, []);
+
     // 加载所有级别的聚合数据
     useEffect(() => {
         setIsDataLoading(true);
         const endMeasure = perf.startMeasure('Load Aggr Data');
         const levels = ['province', 'city', 'district'];
         Promise.all(levels.map(level =>
-            fetch(`/api/pois/aggregated?level=${level}`).then(res => res.json())
+            apiFetch(`/api/pois/aggregated?level=${level}`).then(res => res.json())
         ))
             .then(([province, city, district]) => {
                 setAggregatedData({ province, city, district });
@@ -123,48 +192,53 @@ function MapView({ config, selectedFeature, useWorker = false, onPOIClick, onPop
             });
     }, []);
 
-    // 视口变化时加载详细 POI 数据
+    // 视口变化时加载详细数据
     const handleMoveEnd = useCallback((bbox, zoom) => {
         setCurrentZoom(zoom);
-        // 只有在放大到详细级别才加载单个 POI
+
+        // 加载网格数据（当缩放级别足够高时）
+        if (config && zoom >= config.zoomConfig.showCells) {
+            const endMeasureCells = perf.startMeasure('Fetch Cells');
+            apiFetch(`/api/cells?bbox=${bbox}&zoom=${zoom}`)
+                .then(res => res.json())
+                .then(data => {
+                    setCells(data);
+                    endMeasureCells();
+                    perf.setCount('Cells', data.features?.length || 0);
+                })
+                .catch(err => {
+                    console.error('Failed to load cells:', err);
+                    endMeasureCells();
+                });
+        } else {
+            setCells(null);
+            perf.setCount('Cells', 0);
+        }
+
+        // 加载详细 POI 数据
         if (config && zoom >= config.zoomConfig.poiLevels.detail) {
             setIsDataLoading(true);
-            const experimentId = useWorker ? 'Web Worker' : 'Main Thread';
-            const endMeasure = perf.startMeasure('Fetch Detailed POIs', experimentId);
+            const endMeasure = perf.startMeasure('Fetch Detailed POIs');
             const url = `/api/pois?bbox=${bbox}&zoom=${zoom}`;
 
-            if (useWorker && worker) {
-                const requestId = Date.now();
-                worker.onmessage = (e) => {
-                    if (e.data.requestId === requestId && e.data.type === 'FETCH_POIS_SUCCESS') {
-                        setPois(e.data.data);
-                        setIsDataLoading(false);
-                        endMeasure();
-                        perf.setCount('Markers (Detail)', e.data.data.features?.length || 0);
-                        perf.addHistory(`Worker fetched ${e.data.data.features?.length} points in ${e.data.workerDuration.toFixed(2)}ms`);
-                    }
-                };
-                worker.postMessage({ type: 'FETCH_POIS', url, requestId });
-            } else {
-                fetch(url)
-                    .then(res => res.json())
-                    .then(data => {
-                        setPois(data);
-                        setIsDataLoading(false);
-                        endMeasure();
-                        perf.setCount('Markers (Detail)', data.features?.length || 0);
-                    })
-                    .catch(err => {
-                        console.error('Failed to load POIs:', err);
-                        setIsDataLoading(false);
-                        endMeasure();
-                    });
-            }
+            apiFetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    setPois(data);
+                    setIsDataLoading(false);
+                    endMeasure();
+                    perf.setCount('Markers (Detail)', data.features?.length || 0);
+                })
+                .catch(err => {
+                    console.error('Failed to load POIs:', err);
+                    setIsDataLoading(false);
+                    endMeasure();
+                });
         } else {
             setPois(null);
             perf.setCount('Markers (Detail)', 0);
         }
-    }, [config, useWorker, worker]);
+    }, [config]);
 
     const handleZoomChange = useCallback((zoom) => {
         onZoomChange(zoom);
@@ -276,6 +350,105 @@ function MapView({ config, selectedFeature, useWorker = false, onPOIClick, onPop
                 selectedFeature={selectedFeature}
             />
 
+            {/* 静态图层：行政区划边界 */}
+            {cities && (
+                <GeoJSON
+                    key="cities-layer"
+                    data={cities}
+                    style={cityStyle}
+                    onEachFeature={(feature, layer) => {
+                        const props = feature.properties;
+                        const name = props.city || props.City_name_CN || props.name || '未知区域';
+                        layer.on({
+                            mouseover: (e) => {
+                                e.target.setStyle({ fillOpacity: 0.3, weight: 2 });
+                            },
+                            mouseout: (e) => {
+                                e.target.setStyle(cityStyle(feature));
+                            }
+                        });
+                        layer.bindTooltip(name, { sticky: true, className: 'city-tooltip' });
+                    }}
+                />
+            )}
+
+            {/* 静态图层：国境线 */}
+            {boundaries && (
+                <GeoJSON
+                    key="boundaries-layer"
+                    data={boundaries}
+                    style={boundaryStyle}
+                />
+            )}
+
+            {/* 动态图层：网格数据 */}
+            {showGrid && cells && cells.features && cells.features.length > 0 && (
+                <GeoJSON
+                    key={`cells-${currentZoom}-${cells.features.length}`}
+                    data={cells}
+                    style={cellStyle}
+                    onEachFeature={(feature, layer) => {
+                        const props = feature.properties;
+                        layer.on({
+                            mouseover: (e) => {
+                                e.target.setStyle({ fillOpacity: 0.6, weight: 1 });
+                            },
+                            mouseout: (e) => {
+                                e.target.setStyle(cellStyle(feature));
+                            },
+                            click: () => {
+                                setSelectedCell(feature);
+                            }
+                        });
+                    }}
+                />
+            )}
+
+            {/* 网格详情弹窗 */}
+            {selectedCell && (
+                <Popup
+                    position={[
+                        selectedCell.geometry.coordinates[0].reduce((sum, c) => sum + c[1], 0) / selectedCell.geometry.coordinates[0].length,
+                        selectedCell.geometry.coordinates[0].reduce((sum, c) => sum + c[0], 0) / selectedCell.geometry.coordinates[0].length
+                    ]}
+                    eventHandlers={{
+                        remove: () => setSelectedCell(null)
+                    }}
+                >
+                    <div className="cell-popup">
+                        <h4>{selectedCell.properties.city || '网格'} - {selectedCell.properties.country || ''}</h4>
+                        <div className="cell-stats">
+                            <div className="stat-row">
+                                <span>人口变化:</span>
+                                <span className={selectedCell.properties.wpop_change > 0 ? 'positive' : 'negative'}>
+                                    {selectedCell.properties.wpop_change?.toFixed(1) || 'N/A'}
+                                </span>
+                            </div>
+                            <div className="stat-row">
+                                <span>小学(2010→2020):</span>
+                                <span>{selectedCell.properties.PS_2010_count} → {selectedCell.properties.PS_2020_count}</span>
+                            </div>
+                            <div className="stat-row">
+                                <span>初中(2010→2020):</span>
+                                <span>{selectedCell.properties.JS_2010_count} → {selectedCell.properties.JS_2020_count}</span>
+                            </div>
+                            <div className="stat-row">
+                                <span>小学教育距离变化:</span>
+                                <span className={selectedCell.properties.ED_PS_change < 0 ? 'positive' : 'negative'}>
+                                    {selectedCell.properties.ED_PS_change?.toFixed(1) || 'N/A'}m
+                                </span>
+                            </div>
+                            <div className="stat-row">
+                                <span>初中教育距离变化:</span>
+                                <span className={selectedCell.properties.ED_JS_change < 0 ? 'positive' : 'negative'}>
+                                    {selectedCell.properties.ED_JS_change?.toFixed(1) || 'N/A'}m
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </Popup>
+            )}
+
             {/* 模式 1: 行政聚合显示 */}
             {!showDetailedPOIs && clusterFeatures.map((feature, idx) => {
                 const [lng, lat] = feature.geometry.coordinates;
@@ -307,12 +480,22 @@ function MapView({ config, selectedFeature, useWorker = false, onPOIClick, onPop
                 );
             })}
 
-            {/* 模式 2: 详细 POI 显示 - Canvas-based for performance */}
-            <CanvasMarkerLayer
-                pois={pois}
-                visible={showDetailedPOIs}
-                onPOIClick={onPOIClick}
-            />
+            {/* 模式 2: 详细 POI 显示 */}
+            {showPOI && showDetailedPOIs && (
+                useOffscreen ? (
+                    <OffscreenCanvasLayer
+                        pois={pois}
+                        visible={showPOI && showDetailedPOIs}
+                        onPOIClick={onPOIClick}
+                    />
+                ) : (
+                    <CanvasMarkerLayer
+                        pois={pois}
+                        visible={showPOI && showDetailedPOIs}
+                        onPOIClick={onPOIClick}
+                    />
+                )
+            )}
         </MapContainer>
     );
 }

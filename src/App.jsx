@@ -2,18 +2,23 @@ import { useState, useEffect } from 'react';
 import MapView from './components/MapView';
 import DetailPanel from './components/DetailPanel';
 import PerformanceMonitor from './components/PerformanceMonitor';
+import Legend from './components/Legend';
+import { apiFetch } from './utils/api';
 
 function App() {
     const [config, setConfig] = useState(null);
     const [selectedFeature, setSelectedFeature] = useState(null);
     const [zoom, setZoom] = useState(5);
-    const [useWorker, setUseWorker] = useState(false);
+    const [useOffscreen, setUseOffscreen] = useState(false);
+    const [showGrid, setShowGrid] = useState(true);
+    const [showPOI, setShowPOI] = useState(true);
 
     const [isLoading, setIsLoading] = useState(false);
 
+
     useEffect(() => {
         setIsLoading(true);
-        fetch('/api/config')
+        apiFetch('/api/config')
             .then(res => res.json())
             .then(data => {
                 setConfig(data);
@@ -37,6 +42,14 @@ function App() {
         setZoom(newZoom);
     };
 
+    const handleLayerToggle = (layerType, visible) => {
+        if (layerType === 'grid') {
+            setShowGrid(visible);
+        } else if (layerType === 'poi') {
+            setShowPOI(visible);
+        }
+    };
+
     return (
         <div className={`app ${isLoading ? 'is-loading' : ''}`}>
             {/* Layer 1: Map Canvas (Background) */}
@@ -44,17 +57,19 @@ function App() {
                 <MapView
                     config={config}
                     selectedFeature={selectedFeature}
-                    useWorker={useWorker}
+                    useOffscreen={useOffscreen}
                     onPOIClick={handlePOIClick}
                     onPopupClose={handleClosePanel}
                     onZoomChange={handleZoomChange}
                     onLoadingChange={setIsLoading}
+                    showGrid={showGrid}
+                    showPOI={showPOI}
                 />
             </div>
 
             {/* Layer 2: UI Overlay (Foreground) */}
             <div className="ui-layer">
-                <PerformanceMonitor useWorker={useWorker} onToggleWorker={() => setUseWorker(!useWorker)} />
+                <PerformanceMonitor useOffscreen={useOffscreen} onToggleOffscreen={() => setUseOffscreen(!useOffscreen)} />
                 {/* Header / Status Bar */}
                 <header className="params-bar">
                     <div className="brand">
@@ -81,13 +96,7 @@ function App() {
                 )}
 
                 {/* Bottom Left: Legend */}
-                <div className="glass-panel legend-card">
-                    <div className="legend-title">Legend</div>
-                    <div className="legend-item">
-                        <div className="legend-dot" style={{ background: '#f59e0b', boxShadow: '0 0 8px #f59e0b' }}></div>
-                        <span>Junior High School (POI)</span>
-                    </div>
-                </div>
+                <Legend onLayerToggle={handleLayerToggle} />
 
                 {/* Status Bar / Hint (Floating) */}
                 <div style={{

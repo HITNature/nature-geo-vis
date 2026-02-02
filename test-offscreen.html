@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OffscreenCanvas Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #canvas {
+            border: 2px solid #333;
+            display: block;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>OffscreenCanvas Rendering Test</h1>
+    
+    <canvas id="canvas" width="800" height="600"></canvas>
+    
+    <div>
+        <button onclick="testBasicRender()">Test Basic Render</button>
+        <button onclick="testWithWorker()">Test With Worker</button>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+    </div>
+    
+    <h2>Console Log:</h2>
+    <div id="log"></div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        
+        function log(msg) {
+            console.log(msg);
+            logEl.innerHTML += msg + '<br>';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 测试点数据
+        const testPoints = [
+            { x: 100, y: 100 },
+            { x: 200, y: 150 },
+            { x: 300, y: 200 },
+            { x: 400, y: 100 },
+            { x: 500, y: 300 },
+            { x: 600, y: 250 },
+        ];
+        
+        function testBasicRender() {
+            log('[Main Thread] Starting basic render test...');
+            
+            // 清空画布
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制点
+            ctx.fillStyle = '#f59e0b';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.85;
+            
+            const path = new Path2D();
+            testPoints.forEach(({ x, y }) => {
+                path.moveTo(x + 6, y);
+                path.arc(x, y, 6, 0, Math.PI * 2);
+            });
+            
+            ctx.fill(path);
+            ctx.stroke(path);
+            
+            log(`[Main Thread] Rendered ${testPoints.length} points`);
+        }
+        
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            log('[Main Thread] Canvas cleared');
+        }
+        
+        let worker = null;
+        
+        function testWithWorker() {
+            log('[Main Thread] Testing with Worker...');
+            
+            if (!canvas.transferControlToOffscreen) {
+                log('[ERROR] OffscreenCanvas not supported!');
+                return;
+            }
+            
+            // 创建新的 canvas 来测试
+            const testCanvas = document.createElement('canvas');
+            testCanvas.width = 800;
+            testCanvas.height = 600;
+            testCanvas.style.border = '2px solid #333';
+            
+            // 替换当前canvas
+            canvas.parentNode.replaceChild(testCanvas, canvas);
+            
+            try {
+                const offscreen = testCanvas.transferControlToOffscreen();
+                log('[Main Thread] Canvas control transferred');
+                
+                // 创建 inline worker
+                const workerCode = `
+                    let canvas = null;
+                    let ctx = null;
+                    
+                    self.onmessage = (e) => {
+                        const { type, ...data } = e.data;
+                        self.postMessage({ type: 'LOG', message: '[Worker] Received: ' + type });
+                        
+                        switch (type) {
+                            case 'INIT':
+                                canvas = data.canvas;
+                                ctx = canvas.getContext('2d');
+                                self.postMessage({ type: 'LOG', message: '[Worker] Initialized, canvas: ' + canvas.width + 'x' + canvas.height });
+                                self.postMessage({ type: 'INIT_COMPLETE' });
+                                break;
+                                
+                            case 'RENDER':
+                                if (!ctx) {
+                                    self.postMessage({ type: 'LOG', message: '[Worker ERROR] Context not ready!' });
+                                    return;
+                                }
+                                
+                                const { points, width, height } = data;
+                                
+                                // 清空
+                                ctx.fillStyle = '#1a1a1a';
+                                ctx.fillRect(0, 0, width, height);
+                                
+                                // 绘制点
+                                ctx.fillStyle = '#f59e0b';
+                                ctx.strokeStyle = '#ffffff';
+                                ctx.lineWidth = 1.5;
+                                ctx.globalAlpha = 0.85;
+                                
+                                const path = new Path2D();
+                                points.forEach(({ x, y }) => {
+                                    path.moveTo(x + 6, y);
+                                    path.arc(x, y, 6, 0, Math.PI * 2);
+                                });
+                                
+                                ctx.fill(path);
+                                ctx.stroke(path);
+                                
+                                self.postMessage({ type: 'LOG', message: '[Worker] Rendered ' + points.length + ' points' });
+                                self.postMessage({ type: 'RENDER_COMPLETE', pointCount: points.length });
+                                break;
+                        }
+                    };
+                `;
+                
+                const blob = new Blob([workerCode], { type: 'application/javascript' });
+                worker = new Worker(URL.createObjectURL(blob));
+                
+                worker.onmessage = (e) => {
+                    if (e.data.type === 'LOG') {
+                        log(e.data.message);
+                    } else if (e.data.type === 'INIT_COMPLETE') {
+                        log('[Main Thread] Worker ready,sending RENDER command');
+                        worker.postMessage({
+                            type: 'RENDER',
+                            points: testPoints,
+                            width: 800,
+                            height: 600
+                        });
+                    } else if (e.data.type === 'RENDER_COMPLETE') {
+                        log(`[Main Thread] Worker rendered ${e.data.pointCount} points!`);
+                    }
+                };
+                
+                worker.onerror = (err) => {
+                    log('[ERROR] Worker error: ' + err.message);
+                };
+                
+                log('[Main Thread] Sending INIT to worker...');
+                worker.postMessage({
+                    type: 'INIT',
+                    canvas: offscreen
+                }, [offscreen]);
+                
+            } catch (err) {
+                log('[ERROR] ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

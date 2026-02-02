@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import { perf } from '../utils/perf';
 
-const PerformanceMonitor = ({ useWorker, onToggleWorker }) => {
+const PerformanceMonitor = ({ useOffscreen, onToggleOffscreen }) => {
     const [metrics, setMetrics] = useState(perf.getMetrics());
-    const [isVisible, setIsVisible] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
+        if (location.search.includes('perf')) setIsVisible(true);
         const unsubscribe = perf.subscribe(newMetrics => {
             setMetrics(newMetrics);
         });
         return unsubscribe;
     }, []);
 
-    if (!isVisible) {
+    if (!isVisible) return null;
+
+    if (!isExpanded) {
         return (
             <div
-                onClick={() => setIsVisible(true)}
+                onClick={() => setIsExpanded(true)}
                 style={{
                     position: 'fixed',
                     top: '80px',
@@ -55,7 +59,7 @@ const PerformanceMonitor = ({ useWorker, onToggleWorker }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
                 <span style={{ fontWeight: 'bold', color: '#38bdf8', letterSpacing: '1px' }}>PERF MONITOR</span>
                 <button
-                    onClick={() => setIsVisible(false)}
+                    onClick={() => setIsExpanded(false)}
                     style={{
                         background: 'transparent',
                         border: 'none',
@@ -67,28 +71,31 @@ const PerformanceMonitor = ({ useWorker, onToggleWorker }) => {
                 >×</button>
             </div>
 
-            {/* Optimization Toggle */}
+            {/* OffscreenCanvas Toggle */}
             <div style={{
-                background: 'rgba(56, 189, 248, 0.1)',
+                background: 'rgba(16, 185, 129, 0.1)',
                 padding: '8px',
                 borderRadius: '6px',
                 marginBottom: '16px',
-                border: '1px solid rgba(56, 189, 248, 0.2)'
+                border: '1px solid rgba(16, 185, 129, 0.2)'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 'bold' }}>WEB WORKER</span>
+                    <div>
+                        <span style={{ color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>OFFSCREEN CANVAS</span>
+                        <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>Worker 线程渲染</div>
+                    </div>
                     <label className="switch" style={{ position: 'relative', display: 'inline-block', width: '32px', height: '18px' }}>
                         <input
                             type="checkbox"
-                            checked={useWorker}
-                            onChange={onToggleWorker}
+                            checked={useOffscreen}
+                            onChange={onToggleOffscreen}
                             style={{ opacity: 0, width: 0, height: 0 }}
                         />
                         <span style={{
                             position: 'absolute',
                             cursor: 'pointer',
                             top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: useWorker ? '#38bdf8' : '#334155',
+                            backgroundColor: useOffscreen ? '#10b981' : '#334155',
                             transition: '.4s',
                             borderRadius: '18px'
                         }}>
@@ -96,7 +103,7 @@ const PerformanceMonitor = ({ useWorker, onToggleWorker }) => {
                                 position: 'absolute',
                                 height: '14px',
                                 width: '14px',
-                                left: useWorker ? '16px' : '2px',
+                                left: useOffscreen ? '16px' : '2px',
                                 bottom: '2px',
                                 backgroundColor: 'white',
                                 transition: '.4s',

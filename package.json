@@ -4,10 +4,17 @@
     "type": "module",
     "scripts": {
         "convert": "node scripts/convert-geodata.js",
+        "convert-raw": "node scripts/convert-raw-data.js",
+        "split-data": "node scripts/split-geojson.js",
+        "import-data": "node scripts/import-to-sqlite.js",
+        "prepare-data": "npm run split-data && npm run import-data",
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "server": "node server/index.js"
+        "server": "node server/index-sqlite.js",
+        "server:legacy": "node server/index.js",
+        "web": "concurrently -n \"SERVER,CLIENT\" -c \"blue,green\" \"npm run server\" \"npm run dev\"",
+        "web:legacy": "concurrently -n \"SERVER,CLIENT\" -c \"blue,green\" \"npm run server:legacy\" \"npm run dev\""
     },
     "dependencies": {
         "better-sqlite3": "^11.0.0",
@@ -17,6 +24,7 @@
         "leaflet": "^1.9.4",
         "leaflet-canvas-marker": "^0.2.0",
         "leaflet.markercluster": "^1.5.3",
+        "proj4": "^2.20.2",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-leaflet": "^4.2.1",
@@ -26,6 +34,7 @@
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",
         "@vitejs/plugin-react": "^4.2.0",
+        "concurrently": "^9.2.1",
         "vite": "^5.0.0"
     }
 }

@@ -1,0 +1,14 @@
+# Render 部署配置
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: nature-geo-vis-server
+    env: node
+    buildCommand: npm install
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false  # 需要在 Render Dashboard 手动配置

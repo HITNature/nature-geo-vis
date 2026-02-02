@@ -26,7 +26,7 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
     }, [pois]);
 
     useEffect(() => {
-        if (!visible || !map) return;
+        if (!map) return;
 
         const endMeasure = perf.startMeasure('Canvas Layer Init');
 
@@ -56,7 +56,8 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
                 }
             });
 
-            canvasLayerRef.current = new CanvasLayer();
+            // 使用markerPane确保POI在最上层
+            canvasLayerRef.current = new CanvasLayer({ pane: 'markerPane' });
             map.addLayer(canvasLayerRef.current);
         }
 
@@ -67,6 +68,13 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
             }
         });
         markersDataRef.current = [];
+
+        // Only create markers if visible
+        if (!visible) {
+            endMeasure();
+            perf.setCount('Canvas Markers', 0);
+            return;
+        }
 
         // Create circle markers (rendered on canvas, not DOM)
         const endRender = perf.startMeasure('Canvas Marker Render');

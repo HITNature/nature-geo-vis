@@ -1,0 +1,11 @@
+# Railway 部署配置
+# https://docs.railway.app/deploy/deployments
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run import-data"
+
+[deploy]
+startCommand = "npm run server"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
