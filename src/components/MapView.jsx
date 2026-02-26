@@ -287,7 +287,7 @@ function MapView({
     }
 
     const showDetailedPOIs = currentLevel === 'detail';
-    const clusterFeatures = currentLevel && currentLevel !== 'detail' ? aggregatedData[currentLevel]?.features : [];
+    const clusterFeatures = currentLevel && currentLevel !== 'detail' ? (aggregatedData[currentLevel]?.features ?? []) : [];
 
     // Track render count
     useEffect(() => {
