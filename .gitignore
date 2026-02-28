@@ -38,10 +38,8 @@ data/geodata.db-shm
 *.db-journal
 
 # 大型原始数据文件（超过 100MB）
-# 使用分片后的文件代替 (但也推送到 GitHub)
 data/*.geojson.backup
 data/cells.geojson
-data/cells_chunks/
 raw-data/china_cell.geojson
 
 # Python 虚拟环境

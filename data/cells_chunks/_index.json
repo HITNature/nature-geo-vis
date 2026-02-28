@@ -1,0 +1,260 @@
+{
+  "originalFile": "cells.geojson",
+  "totalFeatures": 177610,
+  "chunkCount": 36,
+  "featuresPerChunk": 5000,
+  "chunks": [
+    {
+      "index": 1,
+      "filename": "cells_001.geojson",
+      "startIndex": 0,
+      "endIndex": 5000,
+      "featureCount": 5000
+    },
+    {
+      "index": 2,
+      "filename": "cells_002.geojson",
+      "startIndex": 5000,
+      "endIndex": 10000,
+      "featureCount": 5000
+    },
+    {
+      "index": 3,
+      "filename": "cells_003.geojson",
+      "startIndex": 10000,
+      "endIndex": 15000,
+      "featureCount": 5000
+    },
+    {
+      "index": 4,
+      "filename": "cells_004.geojson",
+      "startIndex": 15000,
+      "endIndex": 20000,
+      "featureCount": 5000
+    },
+    {
+      "index": 5,
+      "filename": "cells_005.geojson",
+      "startIndex": 20000,
+      "endIndex": 25000,
+      "featureCount": 5000
+    },
+    {
+      "index": 6,
+      "filename": "cells_006.geojson",
+      "startIndex": 25000,
+      "endIndex": 30000,
+      "featureCount": 5000
+    },
+    {
+      "index": 7,
+      "filename": "cells_007.geojson",
+      "startIndex": 30000,
+      "endIndex": 35000,
+      "featureCount": 5000
+    },
+    {
+      "index": 8,
+      "filename": "cells_008.geojson",
+      "startIndex": 35000,
+      "endIndex": 40000,
+      "featureCount": 5000
+    },
+    {
+      "index": 9,
+      "filename": "cells_009.geojson",
+      "startIndex": 40000,
+      "endIndex": 45000,
+      "featureCount": 5000
+    },
+    {
+      "index": 10,
+      "filename": "cells_010.geojson",
+      "startIndex": 45000,
+      "endIndex": 50000,
+      "featureCount": 5000
+    },
+    {
+      "index": 11,
+      "filename": "cells_011.geojson",
+      "startIndex": 50000,
+      "endIndex": 55000,
+      "featureCount": 5000
+    },
+    {
+      "index": 12,
+      "filename": "cells_012.geojson",
+      "startIndex": 55000,
+      "endIndex": 60000,
+      "featureCount": 5000
+    },
+    {
+      "index": 13,
+      "filename": "cells_013.geojson",
+      "startIndex": 60000,
+      "endIndex": 65000,
+      "featureCount": 5000
+    },
+    {
+      "index": 14,
+      "filename": "cells_014.geojson",
+      "startIndex": 65000,
+      "endIndex": 70000,
+      "featureCount": 5000
+    },
+    {
+      "index": 15,
+      "filename": "cells_015.geojson",
+      "startIndex": 70000,
+      "endIndex": 75000,
+      "featureCount": 5000
+    },
+    {
+      "index": 16,
+      "filename": "cells_016.geojson",
+      "startIndex": 75000,
+      "endIndex": 80000,
+      "featureCount": 5000
+    },
+    {
+      "index": 17,
+      "filename": "cells_017.geojson",
+      "startIndex": 80000,
+      "endIndex": 85000,
+      "featureCount": 5000
+    },
+    {
+      "index": 18,
+      "filename": "cells_018.geojson",
+      "startIndex": 85000,
+      "endIndex": 90000,
+      "featureCount": 5000
+    },
+    {
+      "index": 19,
+      "filename": "cells_019.geojson",
+      "startIndex": 90000,
+      "endIndex": 95000,
+      "featureCount": 5000
+    },
+    {
+      "index": 20,
+      "filename": "cells_020.geojson",
+      "startIndex": 95000,
+      "endIndex": 100000,
+      "featureCount": 5000
+    },
+    {
+      "index": 21,
+      "filename": "cells_021.geojson",
+      "startIndex": 100000,
+      "endIndex": 105000,
+      "featureCount": 5000
+    },
+    {
+      "index": 22,
+      "filename": "cells_022.geojson",
+      "startIndex": 105000,
+      "endIndex": 110000,
+      "featureCount": 5000
+    },
+    {
+      "index": 23,
+      "filename": "cells_023.geojson",
+      "startIndex": 110000,
+      "endIndex": 115000,
+      "featureCount": 5000
+    },
+    {
+      "index": 24,
+      "filename": "cells_024.geojson",
+      "startIndex": 115000,
+      "endIndex": 120000,
+      "featureCount": 5000
+    },
+    {
+      "index": 25,
+      "filename": "cells_025.geojson",
+      "startIndex": 120000,
+      "endIndex": 125000,
+      "featureCount": 5000
+    },
+    {
+      "index": 26,
+      "filename": "cells_026.geojson",
+      "startIndex": 125000,
+      "endIndex": 130000,
+      "featureCount": 5000
+    },
+    {
+      "index": 27,
+      "filename": "cells_027.geojson",
+      "startIndex": 130000,
+      "endIndex": 135000,
+      "featureCount": 5000
+    },
+    {
+      "index": 28,
+      "filename": "cells_028.geojson",
+      "startIndex": 135000,
+      "endIndex": 140000,
+      "featureCount": 5000
+    },
+    {
+      "index": 29,
+      "filename": "cells_029.geojson",
+      "startIndex": 140000,
+      "endIndex": 145000,
+      "featureCount": 5000
+    },
+    {
+      "index": 30,
+      "filename": "cells_030.geojson",
+      "startIndex": 145000,
+      "endIndex": 150000,
+      "featureCount": 5000
+    },
+    {
+      "index": 31,
+      "filename": "cells_031.geojson",
+      "startIndex": 150000,
+      "endIndex": 155000,
+      "featureCount": 5000
+    },
+    {
+      "index": 32,
+      "filename": "cells_032.geojson",
+      "startIndex": 155000,
+      "endIndex": 160000,
+      "featureCount": 5000
+    },
+    {
+      "index": 33,
+      "filename": "cells_033.geojson",
+      "startIndex": 160000,
+      "endIndex": 165000,
+      "featureCount": 5000
+    },
+    {
+      "index": 34,
+      "filename": "cells_034.geojson",
+      "startIndex": 165000,
+      "endIndex": 170000,
+      "featureCount": 5000
+    },
+    {
+      "index": 35,
+      "filename": "cells_035.geojson",
+      "startIndex": 170000,
+      "endIndex": 175000,
+      "featureCount": 5000
+    },
+    {
+      "index": 36,
+      "filename": "cells_036.geojson",
+      "startIndex": 175000,
+      "endIndex": 177610,
+      "featureCount": 2610
+    }
+  ]
+}
