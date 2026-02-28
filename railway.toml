@@ -6,6 +6,6 @@ builder = "NIXPACKS"
 buildCommand = "npm install"
 
 [deploy]
-startCommand = "bash scripts/ensure-db.sh && npm run server"
+startCommand = "node scripts/ensure-db.js && npm run server"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
