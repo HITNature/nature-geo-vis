@@ -40,6 +40,7 @@ data/geodata.db-shm
 # 大型原始数据文件（超过 100MB）
 data/*.geojson.backup
 data/cells.geojson
+data/cells_chunks/
 raw-data/china_cell.geojson
 
 # Python 虚拟环境
