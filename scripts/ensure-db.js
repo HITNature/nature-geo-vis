@@ -62,11 +62,25 @@ function download(url, dest, maxRedirects = 5) {
 }
 
 async function main() {
-    if (fs.existsSync(dbPath)) {
+    const expectedSize = parseInt(process.env.GEODATA_DB_SIZE || '0', 10);
+    const forceDownload = process.env.FORCE_DB_DOWNLOAD === 'true';
+
+    if (fs.existsSync(dbPath) && !forceDownload) {
         const stats = fs.statSync(dbPath);
         const sizeMB = (stats.size / 1024 / 1024).toFixed(1);
-        console.log(`[ensure-db] geodata.db 已存在 (${sizeMB}MB)，跳过下载`);
-        return;
+
+        if (expectedSize > 0 && Math.abs(stats.size - expectedSize) > 1024 * 1024) {
+            console.log(`[ensure-db] geodata.db 大小不匹配 (本地 ${stats.size} vs 期望 ${expectedSize})，重新下载`);
+            fs.unlinkSync(dbPath);
+        } else {
+            console.log(`[ensure-db] geodata.db 已存在 (${sizeMB}MB)，跳过下载`);
+            return;
+        }
+    }
+
+    if (forceDownload && fs.existsSync(dbPath)) {
+        console.log('[ensure-db] FORCE_DB_DOWNLOAD=true，删除旧文件...');
+        fs.unlinkSync(dbPath);
     }
 
     const url = process.env.GEODATA_DB_URL;
