@@ -36,7 +36,9 @@
   --color-poi-decrease: #c084fc;
   /* Purple 400 - Service pop decrease */
 
-  /* Status */
+  /* Status (Adjusted: Red for Increase, Green for Decrease) */
+  --color-increase: #ef4444; /* Red */
+  --color-decrease: #10b981; /* Green */
   --color-success: #10b981;
   --color-error: #ef4444;
 
@@ -742,11 +744,11 @@ code,
 }
 
 .stat-row .positive {
-  color: var(--color-success);
+  color: var(--color-increase);
 }
 
 .stat-row .negative {
-  color: var(--color-error);
+  color: var(--color-decrease);
 }
 
 /* ===== Grid Legend (for cells layer) ===== */

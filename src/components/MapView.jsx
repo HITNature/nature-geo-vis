@@ -416,34 +416,41 @@ function MapView({
                     }}
                 >
                     <div className="cell-popup">
-                        <h4>{selectedCell.properties.city || '网格'} - {selectedCell.properties.country || ''}</h4>
+                        <h4>{selectedCell.properties.city || '网格'} - {selectedCell.properties.province || ''}</h4>
                         <div className="cell-stats">
-                            <div className="stat-row">
-                                <span>人口变化:</span>
-                                <span className={selectedCell.properties.wpop_change > 0 ? 'positive' : 'negative'}>
-                                    {selectedCell.properties.wpop_change?.toFixed(1) || 'N/A'}
-                                </span>
-                            </div>
-                            <div className="stat-row">
-                                <span>小学(2010→2020):</span>
-                                <span>{selectedCell.properties.PS_2010_count} → {selectedCell.properties.PS_2020_count}</span>
-                            </div>
-                            <div className="stat-row">
-                                <span>初中(2010→2020):</span>
-                                <span>{selectedCell.properties.JS_2010_count} → {selectedCell.properties.JS_2020_count}</span>
-                            </div>
-                            <div className="stat-row">
-                                <span>小学教育距离变化:</span>
-                                <span className={selectedCell.properties.ED_PS_change < 0 ? 'positive' : 'negative'}>
-                                    {selectedCell.properties.ED_PS_change?.toFixed(1) || 'N/A'}m
-                                </span>
-                            </div>
-                            <div className="stat-row">
-                                <span>初中教育距离变化:</span>
-                                <span className={selectedCell.properties.ED_JS_change < 0 ? 'positive' : 'negative'}>
-                                    {selectedCell.properties.ED_JS_change?.toFixed(1) || 'N/A'}m
-                                </span>
-                            </div>
+                            {displayFields && displayFields.map((field) => {
+                                let value = selectedCell.properties[field.key];
+                                let displayValue = value;
+                                let statusClass = '';
+
+                                // Special formatting for School count change ranges (PS/JS)
+                                if (field.key === 'PS_count_change') {
+                                    displayValue = `${selectedCell.properties.PS_2010_count || 0} → ${selectedCell.properties.PS_2020_count || 0}`;
+                                    const diff = (selectedCell.properties.PS_2020_count || 0) - (selectedCell.properties.PS_2010_count || 0);
+                                    if (diff > 0) statusClass = 'positive';
+                                    else if (diff < 0) statusClass = 'negative';
+                                } else if (field.key === 'JS_count_change') {
+                                    displayValue = `${selectedCell.properties.JS_2010_count || 0} → ${selectedCell.properties.JS_2020_count || 0}`;
+                                    const diff = (selectedCell.properties.JS_2020_count || 0) - (selectedCell.properties.JS_2010_count || 0);
+                                    if (diff > 0) statusClass = 'positive';
+                                    else if (diff < 0) statusClass = 'negative';
+                                } else {
+                                    // Default numeric logic
+                                    if (value === null || value === undefined || value === '') return null;
+                                    displayValue = typeof value === 'number' ? value.toFixed(2) : value;
+                                    if (typeof value === 'number') {
+                                        if (value > 0) statusClass = 'positive';
+                                        else if (value < 0) statusClass = 'negative';
+                                    }
+                                }
+
+                                return (
+                                    <div key={field.key} className="stat-row">
+                                        <span>{field.label}:</span>
+                                        <span className={statusClass}>{displayValue}</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </Popup>

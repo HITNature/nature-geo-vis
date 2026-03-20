@@ -3,11 +3,13 @@
  * 根据 background.md 需求更新为正确的字段
  */
 export const displayFields = [
-    { key: 'wpop_change', label: 'wpop change', color: '#3b82f6' },
-    { key: 'pop_6_11_change', label: 'pop6-11 change', color: '#60a5fa' },
-    { key: 'pop_12_14_change', label: 'pop12-14 change', color: '#8b5cf6' },
-    { key: 'ed_ps_change', label: 'ed ps change', color: '#f59e0b' },
-    { key: 'ed_js_change', label: 'ed js change', color: '#ef4444' },
+    { key: 'wpop_change', label: '人口变化', color: '#3b82f6' },
+    { key: 'pop_6_11_change', label: '小学学龄人口变化', color: '#60a5fa' },
+    { key: 'pop_12_14_change', label: '初中学龄人口变化', color: '#8b5cf6' },
+    { key: 'PS_count_change', label: '小学数量变化', color: '#22c55e' }, // Special handling in UI for text
+    { key: 'JS_count_change', label: '初中数量变化', color: '#84cc16' }, // Special handling in UI for text
+    { key: 'ed_ps_change', label: '小学教育距离变化', color: '#f59e0b' },
+    { key: 'ed_js_change', label: '初中教育距离变化', color: '#ef4444' },
 ];
 
 /**
@@ -15,7 +17,9 @@ export const displayFields = [
  */
 export const poiDisplayFields = [
     { key: 'name', label: '名称', color: '#10b981' },
-    { key: 'survive_pop_change', label: 'survive pop change', color: '#f59e0b' },
+    { key: 'survive_2010_pop', label: '2010_survice_pop', color: '#38bdf8' },
+    { key: 'survive_2020_pop', label: '2020_survice_pop', color: '#38bdf8' },
+    { key: 'survive_pop_change', label: 'survice pop change', color: '#f59e0b' },
 ];
 
 /**

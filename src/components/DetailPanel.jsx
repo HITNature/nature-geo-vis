@@ -84,39 +84,66 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
 
             <div className="detail-view__content">
                 <div className="data-grid">
-                    {/* ID Field */}
-                    <div className="data-row">
-                        <span className="data-label">ID REF</span>
-                        <span className="data-value" style={{ opacity: 0.5 }}>{properties.id}</span>
-                    </div>
-
                     {/* Dynamic Fields */}
                     {isPOI ? (
                         // POI Fields
-                        poiDisplayFields && poiDisplayFields.map((field) => (
-                            <div key={field.key} className="data-row">
-                                <span className="data-label">{field.label}</span>
-                                <span className="data-value">
-                                    {properties[field.key] !== undefined && properties[field.key] !== null
-                                        ? properties[field.key]
-                                        : 'N/A'}
-                                </span>
-                            </div>
-                        ))
+                        poiDisplayFields && poiDisplayFields.map((field) => {
+                            const value = properties[field.key];
+                            // Hide null, undefined, or empty string values
+                            if (value === null || value === undefined || value === '') return null;
+
+                            return (
+                                <div key={field.key} className="data-row">
+                                    <span className="data-label">{field.label}</span>
+                                    <span className={`data-value ${
+                                        field.key.includes('change') || field.key.includes('pop')
+                                            ? (parseFloat(value) > 0 ? 'positive' : parseFloat(value) < 0 ? 'negative' : '')
+                                            : ''
+                                    }`}>
+                                        {typeof value === 'number' ? value.toFixed(2) : value}
+                                    </span>
+                                </div>
+                            );
+                        })
                     ) : (
                         // Grid Fields
-                        displayFields && displayFields.map((field) => (
-                            <div key={field.key} className="data-row">
-                                <span className="data-label">{field.label}</span>
-                                <span className="data-value">
-                                    {properties[field.key] !== undefined && properties[field.key] !== null
-                                        ? typeof properties[field.key] === 'number'
-                                            ? properties[field.key].toFixed(2)
-                                            : properties[field.key]
-                                        : 'N/A'}
-                                </span>
-                            </div>
-                        ))
+                        displayFields && displayFields.map((field) => {
+                            let value = properties[field.key];
+                            let displayValue = value;
+                            let statusClass = '';
+
+                            // Special formatting for School count change ranges
+                            if (field.key === 'PS_count_change') {
+                                displayValue = `${properties.PS_2010_count || 0} → ${properties.PS_2020_count || 0}`;
+                                // For color, calculate diff
+                                const diff = (properties.PS_2020_count || 0) - (properties.PS_2010_count || 0);
+                                if (diff > 0) statusClass = 'positive';
+                                else if (diff < 0) statusClass = 'negative';
+                            } else if (field.key === 'JS_count_change') {
+                                displayValue = `${properties.JS_2010_count || 0} → ${properties.JS_2020_count || 0}`;
+                                const diff = (properties.JS_2020_count || 0) - (properties.JS_2010_count || 0);
+                                if (diff > 0) statusClass = 'positive';
+                                else if (diff < 0) statusClass = 'negative';
+                            } else {
+                                // Default numeric change logic
+                                if (value === null || value === undefined) return null;
+                                displayValue = typeof value === 'number' ? value.toFixed(2) : value;
+
+                                if (typeof value === 'number') {
+                                    if (value > 0) statusClass = 'positive';
+                                    else if (value < 0) statusClass = 'negative';
+                                }
+                            }
+
+                            return (
+                                <div key={field.key} className="data-row">
+                                    <span className="data-label">{field.label}</span>
+                                    <span className={`data-value ${statusClass}`}>
+                                        {displayValue}
+                                    </span>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </div>
