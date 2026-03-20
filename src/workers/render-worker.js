@@ -11,7 +11,8 @@ let canvasHeight = 0;
 
 // 渲染配置
 const MARKER_RADIUS = 6;
-const MARKER_FILL = '#f59e0b';
+const MARKER_FILL_INCREASE = '#38bdf8'; // Sky Blue - service pop 增加
+const MARKER_FILL_DECREASE = '#c084fc'; // Purple - service pop 减少
 const MARKER_STROKE = '#ffffff';
 const MARKER_STROKE_WIDTH = 1.5;
 
@@ -90,27 +91,34 @@ self.onmessage = (e) => {
                 return;
             }
 
-            // 批量绘制所有点
-            ctx.fillStyle = MARKER_FILL;
-            ctx.strokeStyle = MARKER_STROKE;
-            ctx.lineWidth = MARKER_STROKE_WIDTH;
-            ctx.globalAlpha = 0.85;
-
-            // 使用 Path2D 批量绘制提升性能
-            const path = new Path2D();
+            // 分组构建 Path2D，按类别（增/减）分别绘制
+            const pathIncrease = new Path2D();
+            const pathDecrease = new Path2D();
 
             for (let i = 0; i < points.length; i++) {
-                const { x, y } = points[i];
+                const { x, y, isIncrease } = points[i];
                 // 记录前几个点的坐标用于调试
                 if (i < 3) {
-                    console.log(`[RenderWorker] Point ${i}:`, { x, y });
+                    console.log(`[RenderWorker] Point ${i}:`, { x, y, isIncrease });
                 }
-                path.moveTo(x + MARKER_RADIUS, y);
-                path.arc(x, y, MARKER_RADIUS, 0, Math.PI * 2);
+                const targetPath = isIncrease ? pathIncrease : pathDecrease;
+                targetPath.moveTo(x + MARKER_RADIUS, y);
+                targetPath.arc(x, y, MARKER_RADIUS, 0, Math.PI * 2);
             }
 
-            ctx.fill(path);
-            ctx.stroke(path);
+            ctx.lineWidth = MARKER_STROKE_WIDTH;
+            ctx.strokeStyle = MARKER_STROKE;
+            ctx.globalAlpha = 0.85;
+
+            // 绘制增加类别（Sky Blue）
+            ctx.fillStyle = MARKER_FILL_INCREASE;
+            ctx.fill(pathIncrease);
+            ctx.stroke(pathIncrease);
+
+            // 绘制减少类别（Purple）
+            ctx.fillStyle = MARKER_FILL_DECREASE;
+            ctx.fill(pathDecrease);
+            ctx.stroke(pathDecrease);
 
             const duration = performance.now() - start;
 

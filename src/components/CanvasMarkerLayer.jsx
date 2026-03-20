@@ -12,15 +12,21 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
     const canvasLayerRef = useRef(null);
     const markersDataRef = useRef([]);
 
+    // POI 颜色配置：蓝紫色系，避免与网格层的红黄绿色系冲突
+    const POI_COLOR_INCREASE = '#38bdf8'; // Sky Blue - service pop 增加
+    const POI_COLOR_DECREASE = '#c084fc'; // Purple - service pop 减少
+
     // Precompute marker positions
     const markerPositions = useMemo(() => {
         if (!pois?.features) return [];
         return pois.features.map(feature => {
             const [lng, lat] = feature.geometry.coordinates;
+            const change = feature.properties?.survive_pop_change;
             return {
                 lat,
                 lng,
-                feature
+                feature,
+                isIncrease: change !== null && change !== undefined && change >= 0
             };
         });
     }, [pois]);
@@ -79,10 +85,11 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
         // Create circle markers (rendered on canvas, not DOM)
         const endRender = perf.startMeasure('Canvas Marker Render');
 
-        markerPositions.forEach(({ lat, lng, feature }) => {
+        markerPositions.forEach(({ lat, lng, feature, isIncrease }) => {
+            const fillColor = isIncrease ? POI_COLOR_INCREASE : POI_COLOR_DECREASE;
             const circleMarker = L.circleMarker([lat, lng], {
                 radius: 6,
-                fillColor: '#f59e0b',
+                fillColor,
                 fillOpacity: 0.8,
                 color: '#ffffff',
                 weight: 1.5,

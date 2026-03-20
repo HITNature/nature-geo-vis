@@ -27,10 +27,12 @@ function OffscreenCanvasLayer({ pois, onPOIClick, visible }) {
         const points = pois.features.map(feature => {
             const [lng, lat] = feature.geometry.coordinates;
             const point = map.latLngToContainerPoint([lat, lng]);
+            const change = feature.properties?.survive_pop_change;
             return {
                 x: point.x,
                 y: point.y,
-                feature
+                feature,
+                isIncrease: change !== null && change !== undefined && change >= 0
             };
         });
         endMeasure();
@@ -182,7 +184,7 @@ function OffscreenCanvasLayer({ pois, onPOIClick, visible }) {
 
         const renderData = {
             type: 'RENDER',
-            points: screenPoints.map(({ x, y }) => ({ x, y })),
+            points: screenPoints.map(({ x, y, isIncrease }) => ({ x, y, isIncrease })),
             width,
             height
         };
@@ -214,7 +216,12 @@ function OffscreenCanvasLayer({ pois, onPOIClick, visible }) {
             const points = pois.features.map(feature => {
                 const [lng, lat] = feature.geometry.coordinates;
                 const point = map.latLngToContainerPoint([lat, lng]);
-                return { x: point.x, y: point.y };
+                const change = feature.properties?.survive_pop_change;
+                return {
+                    x: point.x,
+                    y: point.y,
+                    isIncrease: change !== null && change !== undefined && change >= 0
+                };
             });
 
             workerRef.current.postMessage({

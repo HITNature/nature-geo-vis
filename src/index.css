@@ -30,6 +30,12 @@
   --color-accent: #f59e0b;
   /* Amber 500 - Highlights like POIs */
 
+  /* POI Colors (Blue-Purple spectrum to differentiate from grid's Red-Yellow-Green) */
+  --color-poi-increase: #38bdf8;
+  /* Sky 400 - Service pop increase */
+  --color-poi-decrease: #c084fc;
+  /* Purple 400 - Service pop decrease */
+
   /* Status */
   --color-success: #10b981;
   --color-error: #ef4444;
