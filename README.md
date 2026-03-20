@@ -1,5 +1,5 @@
 # 教育资源分布可视化
-
+> Github: https://github.com/HITNature/nature-geo-vis
 数据可视化项目，用于展示和探索基于geodatabase的教育资源分布数据。
 
 ## 项目概述
