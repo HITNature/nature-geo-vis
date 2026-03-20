@@ -5,7 +5,7 @@
 ## 部署架构
 
 采用**前后端分离部署**方案：
-- **前端**：部署到 Vercel（利用其全球 CDN 和自动构建）
+- **前端**：部署到 **Vercel** 或 **Cloudflare Pages**（见下文「中国大陆访问」）
 - **后端**：部署到 Railway 或 Render（支持 Node.js 长期运行服务）
 
 ## 部署前准备
@@ -63,37 +63,7 @@ git push origin main
 #### 4. 部署
 - Railway 会自动运行 `npm install` 和 `npm run server`
 - 等待部署完成（约 2-3 分钟）
-- 记录分配的 URL，例如：`https://nature-geo-vis-backend.up.railway.app`
-
----
-
-### 选项 B: 使用 Render
-
-#### 1. 创建 Render 账号
-访问 [render.com](https://render.com/) 并使用 GitHub 账号登录。
-
-#### 2. 创建 Web Service
-1. 点击 "New +" → "Web Service"
-2. 连接 GitHub 仓库 `nature-geo-vis`
-3. 配置如下：
-   - **Name**: `nature-geo-vis-server`
-   - **Environment**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm run server`
-   - **Instance Type**: `Free`（或升级为付费）
-
-#### 3. 配置环境变量
-添加以下环境变量：
-
-| Key | Value |
-|-----|-------|
-| `NODE_ENV` | `production` |
-| `FRONTEND_URL` | （待填写） |
-
-#### 4. 部署
-- 点击 "Create Web Service"
-- 等待部署完成
-- 记录分配的 URL，例如：`https://nature-geo-vis-server.onrender.com`
+- 记录分配的 URL，例如：`https://nature-geo-vis-server-production.up.railway.app`
 
 ---
 
@@ -121,14 +91,34 @@ git push origin main
 
 | Name | Value | 说明 |
 |------|-------|------|
-| `VITE_API_BASE_URL` | `https://your-backend.railway.app` | 替换为第一步获得的后端 URL |
+| `VITE_API_BASE_URL` | `https://nature-geo-vis-server-production.up.railway.app` | 替换为第一步获得的后端 URL 不允许后面带/否则请求出错 |
 
 **重要**：将 `your-backend.railway.app` 替换为您在第一步中获得的实际后端 URL。
 
 #### 5. 部署
 - 点击 "Deploy"
 - 等待构建完成（约 1-2 分钟）
-- 获得前端 URL，例如：`https://nature-geo-vis.vercel.app`
+- 获得前端 URL，例如：`https://nature-geo-vis.vercel.app` 
+
+### 中国大陆无法访问 Vercel 怎么办？
+
+`*.vercel.app` 等默认域名在中国大陆常被墙或极慢，**不是项目配置错误**，无法通过改代码修复。
+
+**推荐做法**：再部署一份前端到 **Cloudflare Pages**（与 Vercel 共用同一 Git 仓库即可），把 `*.pages.dev` 或自定义域名作为大陆用户入口。
+
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/) → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+2. 选择本仓库，构建设置：
+   - **Build command**：`npm run build`
+   - **Build output directory**：`dist`
+3. **Environment variables**：添加 `VITE_API_BASE_URL`（与 Vercel 相同，指向 Railway 后端 URL，**末尾不要加 `/`**）
+4. 可选：添加 `NODE_VERSION` = `18`
+5. 保存并部署。仓库已包含 `public/_redirects`，用于 SPA 路由回退。
+
+部署完成后：
+- 将 Railway 的 `FRONTEND_URL` 改为**你实际给用户用的前端域名**（若需严格 CORS，可同时配置多个来源需改 `server/config.js` 或环境变量逻辑；当前默认 `*` 时无需改）
+- 大陆用户访问 **Cloudflare Pages** 地址；海外用户可继续用 Vercel
+
+**其他选项**：自有域名经 Cloudflare DNS 代理指向前端；或国内云 + CDN（通常需 **ICP 备案**）。
 
 ---
 
