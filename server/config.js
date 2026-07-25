@@ -1,6 +1,6 @@
 /**
  * 可配置的展示字段
- * 对齐 toXY0723/平台展示信息toXY.md（GCs_level / POI）
+ * 对齐 GCs_level / POI 展示字段（见 docs/NC_DATA_MAPPING.md）
  */
 export const displayFields = [
     // 人口

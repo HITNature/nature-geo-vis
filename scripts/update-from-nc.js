@@ -1,14 +1,15 @@
 /**
- * 从 toXY0723/NCtoXY0721.geodatabase 更新本地 GeoJSON
+ * 从根目录 geodatabase.db 更新本地 GeoJSON
+ *
+ * 用法：先用新库覆盖根目录 geodatabase.db，再执行
+ *   npm run update-from-nc
  *
  * 策略：
- * - GCs_level / city_level：几何仍是 ESRI Shape blob，难以可靠解析
+ * - GCs_level / city_level：几何仍是 ESRI Shape blob
  *   → 复用现有 cells_chunks / cities.geojson 几何，按 OBJECTID 合并新属性
  * - JS_POI_level / PS_POI_level：有明文 lon/lat，直接导出
  *   → JS 保留旧 pois 的省市区字段（新库 JS 表无行政字段）
- * - boundaries：新库无国境线表，沿用现有 boundaries.geojson
- *
- * 用法：node scripts/update-from-nc.js
+ * - boundaries：新库若无国境线表，沿用现有 boundaries.geojson
  */
 
 import Database from 'better-sqlite3';
@@ -19,10 +20,11 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
 const dataDir = path.join(rootDir, 'data');
-const ncPath = path.join(rootDir, 'toXY0723', 'NCtoXY0721.geodatabase');
+const ncPath = path.join(rootDir, 'geodatabase.db');
 
 if (!fs.existsSync(ncPath)) {
     console.error('找不到源库:', ncPath);
+    console.error('请先将新的 .geodatabase 覆盖到项目根目录 geodatabase.db');
     process.exit(1);
 }
 
@@ -242,7 +244,7 @@ function updatePsPois() {
     console.log(`  ✅ 小学 POI ${features.length}`);
 }
 
-console.log('=== 从 NCtoXY0721.geodatabase 更新数据 ===');
+console.log('=== 从 geodatabase.db 更新数据 ===');
 console.log('源库:', ncPath);
 updateCells();
 updateCities();

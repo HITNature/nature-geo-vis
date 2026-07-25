@@ -23,10 +23,11 @@ pnpm-debug.log*
 !.vscode/extensions.json
 .idea
 
-# 临时文件
+# 临时文件 / 需求方临时交付目录（不入库）
 .claude
 *.tmp
 *.temp
+toXY0723
 
 # 数据库文件
 geodatabase.db
@@ -36,15 +37,13 @@ data/geodata.db-shm
 *.db-wal
 *.db-shm
 *.db-journal
+*.geodatabase
 
 # 大型原始数据文件（超过 100MB）
 data/*.geojson.backup
 data/cells.geojson
 data/cells_chunks/
 raw-data/china_cell.geojson
-*.geodatabase
-toXY0723/*.geodatabase
-toXY0723/*.gdb
 
 # Python 虚拟环境
 .venv
