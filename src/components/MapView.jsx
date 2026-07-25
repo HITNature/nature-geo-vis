@@ -430,7 +430,7 @@ function MapView({
                     <div className="cell-popup">
                         <h4>{selectedCell.properties.city || '网格'} - {selectedCell.properties.province || ''}</h4>
                         <div className="cell-stats">
-                            {displayFields && displayFields.map((field) => {
+                            {config?.displayFields?.map((field) => {
                                 let value = selectedCell.properties[field.key];
                                 let displayValue = value;
                                 let statusClass = '';
@@ -449,10 +449,19 @@ function MapView({
                                 } else {
                                     // Default numeric logic
                                     if (value === null || value === undefined || value === '') return null;
-                                    displayValue = typeof value === 'number' ? value.toFixed(2) : value;
                                     if (typeof value === 'number') {
+                                        if (field.format === 'percent' || String(field.key).includes('ratio') || String(field.key).includes('changeR')) {
+                                            const pct = Math.abs(value) <= 1 ? value * 100 : value;
+                                            displayValue = `${pct.toFixed(2)}%`;
+                                        } else if (field.format === 'int') {
+                                            displayValue = Math.round(value).toLocaleString();
+                                        } else {
+                                            displayValue = value.toFixed(2);
+                                        }
                                         if (value > 0) statusClass = 'positive';
                                         else if (value < 0) statusClass = 'negative';
+                                    } else {
+                                        displayValue = value;
                                     }
                                 }
 
