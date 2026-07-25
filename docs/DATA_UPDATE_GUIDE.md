@@ -47,17 +47,14 @@ graph TD
 ## 3. 下次更新数据的操作流程
 
 ### 第一步：本地数据转换
-1.  **准备原始文件**：确保根目录存在最新的 `geodatabase.db`。
-2.  **获取 GeoJSON**：如果你更新了网格或边界，请将 ArcGIS 导出的新 GeoJSON 放入 `raw-data/`。
-3.  **运行转换链路**：
+1.  **准备原始文件**：将最新库放到 `toXY0723/NCtoXY0721.geodatabase`（或更新 `geodatabase.db`）。
+2.  **从 NC 库更新（推荐，2026-07）**：
     ```bash
-    # 1. 提取点位
-    npm run convert
-    # 2. 坐标投影转换 (UTM -> WGS84)
-    npm run convert-raw
-    # 3. 分片并建立 SQLite R-Tree 索引
-    npm run prepare-data
+    npm run update-from-nc   # 合并网格/城市属性，导出 JS+PS POI
+    npm run import-data      # 重建 data/geodata.db
     ```
+    详见 `docs/NC_DATA_MAPPING.md`。
+3.  **旧流程（全量重导）**：若需重做几何，仍用 ArcGIS 导出 → `convert-raw` → `prepare-data`。
 
 ### 第二步：发布与云端同步 (关键)
 由于 `.gitignore` 忽略了超过 100MB 的 `data/geodata.db`，**直接 Git Push 是无效的**。
