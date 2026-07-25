@@ -6,6 +6,7 @@ import { perf } from '../utils/perf';
 import { apiFetch } from '../utils/api';
 import CanvasMarkerLayer from './CanvasMarkerLayer';
 import OffscreenCanvasLayer from './OffscreenCanvasLayer';
+import SearchBox from './SearchBox';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -52,13 +53,13 @@ const cellStyle = (feature) => {
     // 根据人口变化显示不同颜色
     const change = feature.properties?.wpop_change || 0;
     let fillColor = '#888888';
-    if (change > 500) fillColor = '#22c55e';      // 增长大
-    else if (change > 0) fillColor = '#84cc16';   // 小幅增长
-    else if (change > -500) fillColor = '#f59e0b'; // 小幅减少
-    else fillColor = '#ef4444';                    // 大幅减少
+    if (change > 500) fillColor = '#ef4444';      // 红色，大幅增长
+    else if (change > 0) fillColor = '#f87171';   // 浅红，小幅增长
+    else if (change > -500) fillColor = '#a3e635'; // 浅绿，小幅减少
+    else fillColor = '#22c55e';                    // 绿色，大幅减少
 
     return {
-        color: '#ffffff',
+        color: '#aaaaaa',
         weight: 0.5,
         fillColor: fillColor,
         fillOpacity: 0.4,
@@ -338,9 +339,10 @@ function MapView({
             whenReady={() => setIsMapLoading(false)}
         >
             <ZoomControl position="bottomright" />
+            <SearchBox />
             <TileLayer
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                 // Performance optimizations
                 keepBuffer={4}              // Keep 4 tiles outside viewport in memory
                 updateWhenZooming={false}   // Don't update during zoom animation

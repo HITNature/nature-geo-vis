@@ -12,11 +12,9 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
     const canvasLayerRef = useRef(null);
     const markersDataRef = useRef([]);
 
-    // POI 颜色：初中橙/紫，小学天蓝/青
-    const JS_INCREASE = '#f59e0b';
-    const JS_DECREASE = '#c084fc';
-    const PS_INCREASE = '#38bdf8';
-    const PS_DECREASE = '#22d3ee';
+    // POI 颜色：红增绿减
+    const POI_INCREASE = '#ef4444'; // 红色，增加
+    const POI_DECREASE = '#10b981'; // 绿色，减少
 
     // Precompute marker positions
     const markerPositions = useMemo(() => {
@@ -24,16 +22,13 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
         return pois.features.map(feature => {
             const [lng, lat] = feature.geometry.coordinates;
             const change = feature.properties?.survive_pop_change;
-            const isPs = feature.properties?.poi_type === 'PS';
             const isIncrease = change !== null && change !== undefined && change >= 0;
             return {
                 lat,
                 lng,
                 feature,
                 isIncrease,
-                color: isPs
-                    ? (isIncrease ? PS_INCREASE : PS_DECREASE)
-                    : (isIncrease ? JS_INCREASE : JS_DECREASE),
+                color: isIncrease ? POI_INCREASE : POI_DECREASE,
             };
         });
     }, [pois]);
@@ -93,7 +88,7 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
         const endRender = perf.startMeasure('Canvas Marker Render');
 
         markerPositions.forEach(({ lat, lng, feature, isIncrease, color }) => {
-            const fillColor = color || (isIncrease ? JS_INCREASE : JS_DECREASE);
+            const fillColor = color || (isIncrease ? POI_INCREASE : POI_DECREASE);
             const circleMarker = L.circleMarker([lat, lng], {
                 radius: 6,
                 fillColor,

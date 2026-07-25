@@ -29,12 +29,11 @@ function Legend({ onLayerToggle }) {
 
             <div className="legend-item legend-toggle">
                 <div className="legend-marker">
-                    <div className="legend-dot" style={{
-                        background: '#f59e0b',
-                        boxShadow: showJsPOI ? '0 0 8px #f59e0b' : 'none',
-                        opacity: showJsPOI ? 1 : 0.4
-                    }}></div>
-                    <span style={{ opacity: showJsPOI ? 1 : 0.5 }}>Junior High (JS POI)</span>
+                    <div style={{ display: 'flex', gap: '3px', opacity: showJsPOI ? 1 : 0.4, alignItems: 'center' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', boxShadow: showJsPOI ? '0 0 6px #ef4444' : 'none' }}></div>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: showJsPOI ? '0 0 6px #10b981' : 'none' }}></div>
+                    </div>
+                    <span style={{ opacity: showJsPOI ? 1 : 0.5, marginLeft: '6px' }}>Junior High (JS POI)</span>
                 </div>
                 <button
                     className={`toggle-btn ${showJsPOI ? 'active' : ''}`}
@@ -47,12 +46,11 @@ function Legend({ onLayerToggle }) {
 
             <div className="legend-item legend-toggle">
                 <div className="legend-marker">
-                    <div className="legend-dot" style={{
-                        background: '#38bdf8',
-                        boxShadow: showPsPOI ? '0 0 8px #38bdf8' : 'none',
-                        opacity: showPsPOI ? 1 : 0.4
-                    }}></div>
-                    <span style={{ opacity: showPsPOI ? 1 : 0.5 }}>Primary School (PS POI)</span>
+                    <div style={{ display: 'flex', gap: '3px', opacity: showPsPOI ? 1 : 0.4, alignItems: 'center' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', boxShadow: showPsPOI ? '0 0 6px #ef4444' : 'none' }}></div>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: showPsPOI ? '0 0 6px #10b981' : 'none' }}></div>
+                    </div>
+                    <span style={{ opacity: showPsPOI ? 1 : 0.5, marginLeft: '6px' }}>Primary School (PS POI)</span>
                 </div>
                 <button
                     className={`toggle-btn ${showPsPOI ? 'active' : ''}`}
@@ -68,10 +66,10 @@ function Legend({ onLayerToggle }) {
                     <div className="legend-grid-sample" style={{
                         opacity: showGrid ? 1 : 0.4
                     }}>
-                        <div className="grid-cell" style={{ background: '#22c55e' }}></div>
-                        <div className="grid-cell" style={{ background: '#84cc16' }}></div>
-                        <div className="grid-cell" style={{ background: '#f59e0b' }}></div>
                         <div className="grid-cell" style={{ background: '#ef4444' }}></div>
+                        <div className="grid-cell" style={{ background: '#f87171' }}></div>
+                        <div className="grid-cell" style={{ background: '#a3e635' }}></div>
+                        <div className="grid-cell" style={{ background: '#22c55e' }}></div>
                     </div>
                     <span style={{ opacity: showGrid ? 1 : 0.5 }}>Population Grid</span>
                 </div>
@@ -88,20 +86,34 @@ function Legend({ onLayerToggle }) {
                 <div className="legend-description">
                     <div className="legend-subtitle">Population Change (2010→2020)</div>
                     <div className="legend-item-small">
-                        <div className="legend-color" style={{ background: '#22c55e' }}></div>
+                        <div className="legend-color" style={{ background: '#ef4444' }}></div>
                         <span>Strong Growth (&gt;500)</span>
                     </div>
                     <div className="legend-item-small">
-                        <div className="legend-color" style={{ background: '#84cc16' }}></div>
+                        <div className="legend-color" style={{ background: '#f87171' }}></div>
                         <span>Moderate Growth (0-500)</span>
                     </div>
                     <div className="legend-item-small">
-                        <div className="legend-color" style={{ background: '#f59e0b' }}></div>
+                        <div className="legend-color" style={{ background: '#a3e635' }}></div>
                         <span>Slight Decline (0 to -500)</span>
                     </div>
                     <div className="legend-item-small">
-                        <div className="legend-color" style={{ background: '#ef4444' }}></div>
+                        <div className="legend-color" style={{ background: '#22c55e' }}></div>
                         <span>Significant Decline (&lt;-500)</span>
+                    </div>
+                </div>
+            )}
+
+            {(showJsPOI || showPsPOI) && (
+                <div className="legend-description" style={{ marginTop: 'var(--space-sm)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-sm)' }}>
+                    <div className="legend-subtitle">POI Service Pop Change</div>
+                    <div className="legend-item-small">
+                        <div className="legend-color" style={{ background: '#ef4444', borderRadius: '50%', width: '10px', height: '10px' }}></div>
+                        <span>Increase / No Change (&ge; 0)</span>
+                    </div>
+                    <div className="legend-item-small">
+                        <div className="legend-color" style={{ background: '#10b981', borderRadius: '50%', width: '10px', height: '10px' }}></div>
+                        <span>Decrease (&lt; 0)</span>
                     </div>
                 </div>
             )}

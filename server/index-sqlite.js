@@ -105,6 +105,20 @@ function prepareQueries() {
     queries.aggregatedDistrict = db.prepare(`
         SELECT name, key, count, lng, lat, level FROM pois_aggregated_district
     `);
+
+    // 搜索地点和 POI
+    queries.searchPlaces = db.prepare(`
+        SELECT name, 'province' AS type, lng, lat FROM pois_aggregated_province WHERE name LIKE ?
+        UNION ALL
+        SELECT name, 'city' AS type, lng, lat FROM pois_aggregated_city WHERE name LIKE ?
+        UNION ALL
+        SELECT name, 'district' AS type, lng, lat FROM pois_aggregated_district WHERE name LIKE ?
+        LIMIT 15
+    `);
+
+    queries.searchPois = db.prepare(`
+        SELECT name, 'poi' AS type, lng, lat FROM pois WHERE name LIKE ? LIMIT 10
+    `);
 }
 
 // 工具函数：构建 GeoJSON FeatureCollection
@@ -332,6 +346,31 @@ app.get('/api/pois', (req, res) => {
     });
 
     res.json({ type: 'FeatureCollection', features });
+});
+
+// API: 搜索地点和 POI
+app.get('/api/search', (req, res) => {
+    const { q } = req.query;
+    if (!q || q.trim() === '') {
+        return res.json([]);
+    }
+
+    try {
+        const likeParam = `%${q}%`;
+        const places = queries.searchPlaces.all(likeParam, likeParam, likeParam);
+        const pois = queries.searchPois.all(likeParam);
+
+        // 合并结果，地点优先，POI 靠后
+        const results = [
+            ...places.map(p => ({ ...p, category: 'place' })),
+            ...pois.map(p => ({ ...p, category: 'poi' }))
+        ];
+
+        res.json(results);
+    } catch (error) {
+        console.error('搜索失败:', error);
+        res.status(500).json({ error: '搜索失败', message: error.message });
+    }
 });
 
 // 健康检查
