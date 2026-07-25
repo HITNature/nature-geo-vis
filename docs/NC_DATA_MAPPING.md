@@ -22,6 +22,7 @@ npm run import-data      # 重建 data/geodata.db
 
 ## 注意
 
-- OBJECTID 与旧库 1:1 对齐，几何复用现有 GeoJSON，无需重新 ArcGIS 导出。
-- 大文件仍不进 Git：`geodata.db`、`cells_chunks/`、`cells.geojson` 等。
+- OBJECTID 与旧库大体 1:1 对齐，几何复用现有 GeoJSON，无需重新 ArcGIS 导出。
+- 已知少量漂移：网格有 8 个 OID 在新旧库互不重叠；城市有 12 个 OID 不重叠（未合并到的要素保留旧属性）。
+- 大文件仍不进 Git：`geodata.db`、`cells_chunks/`、`cells.geojson` 等；`pois.geojson` / `pois_ps.geojson` / `cities.geojson` 可进仓库。
 - 上线需重新上传 GitHub Release，并设 `FORCE_DB_DOWNLOAD=true` 刷新 Railway Volume。
