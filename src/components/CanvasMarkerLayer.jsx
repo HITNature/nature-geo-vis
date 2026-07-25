@@ -92,8 +92,8 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
         // Create circle markers (rendered on canvas, not DOM)
         const endRender = perf.startMeasure('Canvas Marker Render');
 
-        markerPositions.forEach(({ lat, lng, feature, isIncrease }) => {
-            const fillColor = isIncrease ? POI_COLOR_INCREASE : POI_COLOR_DECREASE;
+        markerPositions.forEach(({ lat, lng, feature, isIncrease, color }) => {
+            const fillColor = color || (isIncrease ? JS_INCREASE : JS_DECREASE);
             const circleMarker = L.circleMarker([lat, lng], {
                 radius: 6,
                 fillColor,
