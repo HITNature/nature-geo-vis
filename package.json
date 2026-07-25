@@ -5,6 +5,7 @@
     "scripts": {
         "convert": "node scripts/convert-geodata.js",
         "convert-raw": "node scripts/convert-raw-data.js",
+        "update-from-nc": "node scripts/update-from-nc.js",
         "split-data": "node scripts/split-geojson.js",
         "import-data": "node scripts/import-to-sqlite.js",
         "prepare-data": "npm run split-data && npm run import-data",

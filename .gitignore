@@ -42,6 +42,9 @@ data/*.geojson.backup
 data/cells.geojson
 data/cells_chunks/
 raw-data/china_cell.geojson
+*.geodatabase
+toXY0723/*.geodatabase
+toXY0723/*.gdb
 
 # Python 虚拟环境
 .venv
