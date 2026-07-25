@@ -1,25 +1,45 @@
 /**
  * 可配置的展示字段
- * 根据 background.md 需求更新为正确的字段
+ * 对齐 toXY0723/平台展示信息toXY.md（GCs_level / POI）
  */
 export const displayFields = [
-    { key: 'wpop_change', label: '人口变化', color: '#3b82f6' },
-    { key: 'pop_6_11_change', label: '小学学龄人口变化', color: '#60a5fa' },
-    { key: 'pop_12_14_change', label: '初中学龄人口变化', color: '#8b5cf6' },
-    { key: 'PS_count_change', label: '小学数量变化', color: '#22c55e' }, // Special handling in UI for text
-    { key: 'JS_count_change', label: '初中数量变化', color: '#84cc16' }, // Special handling in UI for text
-    { key: 'ed_ps_change', label: '小学教育距离变化', color: '#f59e0b' },
-    { key: 'ed_js_change', label: '初中教育距离变化', color: '#ef4444' },
+    // 人口
+    { key: 'wpop_2010_corrected', label: '人口 2010', color: '#3b82f6', format: 'int' },
+    { key: 'wpop_2020_corrected', label: '人口 2020', color: '#3b82f6', format: 'int' },
+    { key: 'wpop_change', label: '人口变化', color: '#3b82f6', format: 'int' },
+    { key: 'wpop_change_ratio', label: '人口变化率', color: '#3b82f6', format: 'percent' },
+    { key: 'pop2010_6_11_corrected', label: 'PSAP 2010', color: '#60a5fa', format: 'int' },
+    { key: 'pop2020_6_11_corrected', label: 'PSAP 2020', color: '#60a5fa', format: 'int' },
+    { key: 'pop_6_11_change', label: 'PSAP 变化', color: '#60a5fa', format: 'int' },
+    { key: 'pop_6_11_change_ratio', label: 'PSAP 变化率', color: '#60a5fa', format: 'percent' },
+    { key: 'pop2010_12_14_corrected', label: 'JSAP 2010', color: '#8b5cf6', format: 'int' },
+    { key: 'pop2020_12_14_corrected', label: 'JSAP 2020', color: '#8b5cf6', format: 'int' },
+    { key: 'pop_12_14_change', label: 'JSAP 变化', color: '#8b5cf6', format: 'int' },
+    { key: 'pop_12_14_change_ratio', label: 'JSAP 变化率', color: '#8b5cf6', format: 'percent' },
+    // 教育距离
+    { key: 'ED_2010_PSchool', label: '小学可达距离 2010 (m)', color: '#f59e0b', format: 'float' },
+    { key: 'ED_2020_PSchool', label: '小学可达距离 2020 (m)', color: '#f59e0b', format: 'float' },
+    { key: 'ED_PS_change', label: '小学可达距离变化', color: '#f59e0b', format: 'float' },
+    { key: 'ED_PS_change_ratio', label: '小学可达距离变化率', color: '#f59e0b', format: 'percent' },
+    { key: 'ED_2010_JSchool', label: '初中可达距离 2010 (m)', color: '#ef4444', format: 'float' },
+    { key: 'ED_2020_JSchool', label: '初中可达距离 2020 (m)', color: '#ef4444', format: 'float' },
+    { key: 'ED_JS_change', label: '初中可达距离变化', color: '#ef4444', format: 'float' },
+    { key: 'ED_JS_change_ratio', label: '初中可达距离变化率', color: '#ef4444', format: 'percent' },
+    // 兼容旧 UI（学校数量箭头展示）
+    { key: 'PS_count_change', label: '小学数量 2010→2020', color: '#22c55e' },
+    { key: 'JS_count_change', label: '初中数量 2010→2020', color: '#84cc16' },
 ];
 
 /**
- * POI 展示字段
+ * POI 展示字段（初中 / 小学 PLS）
  */
 export const poiDisplayFields = [
     { key: 'name', label: '名称', color: '#10b981' },
-    { key: 'survive_2010_pop', label: '2010_survice_pop', color: '#38bdf8' },
-    { key: 'survive_2020_pop', label: '2020_survice_pop', color: '#38bdf8' },
-    { key: 'survive_pop_change', label: 'survice pop change', color: '#f59e0b' },
+    { key: 'poi_type', label: '类型', color: '#94a3b8' },
+    { key: 'survive_2010_pop', label: 'PLS 2010', color: '#38bdf8', format: 'int' },
+    { key: 'survive_2020_pop', label: 'PLS 2020', color: '#38bdf8', format: 'int' },
+    { key: 'survive_pop_change', label: 'PLS 变化', color: '#f59e0b', format: 'int' },
+    { key: 'survive_pop_change_R', label: 'PLS 变化率', color: '#f59e0b', format: 'percent' },
 ];
 
 /**

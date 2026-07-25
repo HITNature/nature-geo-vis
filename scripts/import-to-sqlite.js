@@ -294,7 +294,7 @@ function importCells() {
 }
 
 /**
- * 导入 POIs
+ * 导入 POIs（初中 pois.geojson + 小学 pois_ps.geojson）
  */
 function importPOIs() {
     console.log('\n📍 导入 POIs...');
@@ -303,6 +303,7 @@ function importPOIs() {
         CREATE TABLE IF NOT EXISTS pois (
             id INTEGER PRIMARY KEY,
             name TEXT,
+            poi_type TEXT,
             province TEXT,
             city TEXT,
             district TEXT,
@@ -327,12 +328,11 @@ function importPOIs() {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_pois_province ON pois(province)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_pois_city ON pois(city)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_pois_district ON pois(district)`);
-
-    const data = loadGeoJSON('pois');
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_pois_type ON pois(poi_type)`);
 
     const insertPOI = db.prepare(`
-        INSERT INTO pois (name, province, city, district, lng, lat, survive_pop_change, geometry, properties)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO pois (name, poi_type, province, city, district, lng, lat, survive_pop_change, geometry, properties)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertRTree = db.prepare(`
@@ -347,12 +347,13 @@ function importPOIs() {
 
             const result = insertPOI.run(
                 props.name || null,
+                props.poi_type || 'JS',
                 props.province || null,
                 props.city || null,
                 props.district || null,
                 coords[0],
                 coords[1],
-                props.survive_pop_change || null,
+                props.survive_pop_change ?? null,
                 JSON.stringify(f.geometry),
                 JSON.stringify(props)
             );
@@ -365,12 +366,23 @@ function importPOIs() {
         }
     });
 
-    insertMany(data.features);
-    console.log(`  ✅ 导入 ${data.features.length} 个 POI`);
+    const js = loadGeoJSON('pois');
+    insertMany(js.features);
+    console.log(`  ✅ 导入初中 POI ${js.features.length}`);
+
+    const psPath = path.join(dataDir, 'pois_ps.geojson');
+    if (fs.existsSync(psPath)) {
+        const ps = JSON.parse(fs.readFileSync(psPath, 'utf-8'));
+        insertMany(ps.features || []);
+        console.log(`  ✅ 导入小学 POI ${(ps.features || []).length}`);
+    } else {
+        console.log('  跳过: pois_ps.geojson 不存在');
+    }
 }
 
 /**
  * 创建聚合视图（预计算）
+ * 默认按初中 POI（poi_type=JS）聚合，避免与小学混计
  */
 function createAggregationViews() {
     console.log('\n📊 创建聚合视图...');
@@ -386,7 +398,7 @@ function createAggregationViews() {
             AVG(lat) as lat,
             'province' as level
         FROM pois
-        WHERE province IS NOT NULL
+        WHERE province IS NOT NULL AND (poi_type = 'JS' OR poi_type IS NULL)
         GROUP BY province
     `);
 
@@ -401,7 +413,7 @@ function createAggregationViews() {
             AVG(lat) as lat,
             'city' as level
         FROM pois
-        WHERE city IS NOT NULL
+        WHERE city IS NOT NULL AND (poi_type = 'JS' OR poi_type IS NULL)
         GROUP BY province, city
     `);
 
@@ -416,7 +428,7 @@ function createAggregationViews() {
             AVG(lat) as lat,
             'district' as level
         FROM pois
-        WHERE district IS NOT NULL
+        WHERE district IS NOT NULL AND (poi_type = 'JS' OR poi_type IS NULL)
         GROUP BY province, city, district
     `);
 

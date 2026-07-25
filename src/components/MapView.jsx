@@ -125,7 +125,9 @@ function MapView({
     onZoomChange,
     onLoadingChange,
     showGrid = true,
-    showPOI = true
+    showJsPOI = true,
+    showPsPOI = true,
+    showPOI = true, // 兼容旧 prop：任一为 true 即显示
 }) {
     const [pois, setPois] = useState(null);
     const [boundaries, setBoundaries] = useState(null);
@@ -219,7 +221,7 @@ function MapView({
         if (config && zoom >= config.zoomConfig.poiLevels.detail) {
             setIsDataLoading(true);
             const endMeasure = perf.startMeasure('Fetch Detailed POIs');
-            const url = `/api/pois?bbox=${bbox}&zoom=${zoom}`;
+            const url = `/api/pois?bbox=${bbox}&zoom=${zoom}&type=all`;
 
             apiFetch(url)
                 .then(res => res.json())
@@ -288,6 +290,16 @@ function MapView({
 
     const showDetailedPOIs = currentLevel === 'detail';
     const clusterFeatures = currentLevel && currentLevel !== 'detail' ? (aggregatedData[currentLevel]?.features ?? []) : [];
+    const poiLayerVisible = showPOI && (showJsPOI || showPsPOI);
+    const filteredPois = (() => {
+        if (!pois?.features) return pois;
+        const features = pois.features.filter((f) => {
+            const t = f.properties?.poi_type || 'JS';
+            if (t === 'PS') return showPsPOI;
+            return showJsPOI;
+        });
+        return { ...pois, features };
+    })();
 
     // Track render count
     useEffect(() => {
@@ -488,17 +500,17 @@ function MapView({
             })}
 
             {/* 模式 2: 详细 POI 显示 */}
-            {showPOI && showDetailedPOIs && (
+            {poiLayerVisible && showDetailedPOIs && (
                 useOffscreen ? (
                     <OffscreenCanvasLayer
-                        pois={pois}
-                        visible={showPOI && showDetailedPOIs}
+                        pois={filteredPois}
+                        visible={poiLayerVisible && showDetailedPOIs}
                         onPOIClick={onPOIClick}
                     />
                 ) : (
                     <CanvasMarkerLayer
-                        pois={pois}
-                        visible={showPOI && showDetailedPOIs}
+                        pois={filteredPois}
+                        visible={poiLayerVisible && showDetailedPOIs}
                         onPOIClick={onPOIClick}
                     />
                 )

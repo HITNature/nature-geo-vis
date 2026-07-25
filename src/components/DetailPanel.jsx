@@ -92,6 +92,19 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
                             // Hide null, undefined, or empty string values
                             if (value === null || value === undefined || value === '') return null;
 
+                            let displayValue = value;
+                            if (typeof value === 'number') {
+                                if (field.format === 'percent' || field.key.endsWith('_R') || field.key.includes('ratio') || field.key.includes('changeR')) {
+                                    displayValue = `${(value * (Math.abs(value) <= 1 ? 100 : 1)).toFixed(2)}%`;
+                                } else if (field.format === 'int') {
+                                    displayValue = Math.round(value).toLocaleString();
+                                } else {
+                                    displayValue = value.toFixed(2);
+                                }
+                            } else if (field.key === 'poi_type') {
+                                displayValue = value === 'PS' ? '小学' : value === 'JS' ? '初中' : value;
+                            }
+
                             return (
                                 <div key={field.key} className="data-row">
                                     <span className="data-label">{field.label}</span>
@@ -100,7 +113,7 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
                                             ? (parseFloat(value) > 0 ? 'positive' : parseFloat(value) < 0 ? 'negative' : '')
                                             : ''
                                     }`}>
-                                        {typeof value === 'number' ? value.toFixed(2) : value}
+                                        {displayValue}
                                     </span>
                                 </div>
                             );
@@ -115,7 +128,6 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
                             // Special formatting for School count change ranges
                             if (field.key === 'PS_count_change') {
                                 displayValue = `${properties.PS_2010_count || 0} → ${properties.PS_2020_count || 0}`;
-                                // For color, calculate diff
                                 const diff = (properties.PS_2020_count || 0) - (properties.PS_2010_count || 0);
                                 if (diff > 0) statusClass = 'positive';
                                 else if (diff < 0) statusClass = 'negative';
@@ -125,13 +137,21 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
                                 if (diff > 0) statusClass = 'positive';
                                 else if (diff < 0) statusClass = 'negative';
                             } else {
-                                // Default numeric change logic
                                 if (value === null || value === undefined) return null;
-                                displayValue = typeof value === 'number' ? value.toFixed(2) : value;
-
                                 if (typeof value === 'number') {
+                                    if (field.format === 'percent' || String(field.key).includes('ratio') || String(field.key).includes('changeR')) {
+                                        // 库内可能是 0~1 小数或已是百分数
+                                        const pct = Math.abs(value) <= 1 ? value * 100 : value;
+                                        displayValue = `${pct.toFixed(2)}%`;
+                                    } else if (field.format === 'int') {
+                                        displayValue = Math.round(value).toLocaleString();
+                                    } else {
+                                        displayValue = value.toFixed(2);
+                                    }
                                     if (value > 0) statusClass = 'positive';
                                     else if (value < 0) statusClass = 'negative';
+                                } else {
+                                    displayValue = value;
                                 }
                             }
 

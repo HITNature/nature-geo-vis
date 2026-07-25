@@ -11,7 +11,8 @@ function App() {
     const [zoom, setZoom] = useState(5);
     const [useOffscreen, setUseOffscreen] = useState(false);
     const [showGrid, setShowGrid] = useState(true);
-    const [showPOI, setShowPOI] = useState(true);
+    const [showJsPOI, setShowJsPOI] = useState(true);
+    const [showPsPOI, setShowPsPOI] = useState(true);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -45,8 +46,14 @@ function App() {
     const handleLayerToggle = (layerType, visible) => {
         if (layerType === 'grid') {
             setShowGrid(visible);
+        } else if (layerType === 'poi-js') {
+            setShowJsPOI(visible);
+        } else if (layerType === 'poi-ps') {
+            setShowPsPOI(visible);
         } else if (layerType === 'poi') {
-            setShowPOI(visible);
+            // 兼容旧调用
+            setShowJsPOI(visible);
+            setShowPsPOI(visible);
         }
     };
 
@@ -63,7 +70,8 @@ function App() {
                     onZoomChange={handleZoomChange}
                     onLoadingChange={setIsLoading}
                     showGrid={showGrid}
-                    showPOI={showPOI}
+                    showJsPOI={showJsPOI}
+                    showPsPOI={showPsPOI}
                 />
             </div>
 

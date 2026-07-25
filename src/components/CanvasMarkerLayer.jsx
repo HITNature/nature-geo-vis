@@ -12,9 +12,11 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
     const canvasLayerRef = useRef(null);
     const markersDataRef = useRef([]);
 
-    // POI 颜色配置：蓝紫色系，避免与网格层的红黄绿色系冲突
-    const POI_COLOR_INCREASE = '#38bdf8'; // Sky Blue - service pop 增加
-    const POI_COLOR_DECREASE = '#c084fc'; // Purple - service pop 减少
+    // POI 颜色：初中橙/紫，小学天蓝/青
+    const JS_INCREASE = '#f59e0b';
+    const JS_DECREASE = '#c084fc';
+    const PS_INCREASE = '#38bdf8';
+    const PS_DECREASE = '#22d3ee';
 
     // Precompute marker positions
     const markerPositions = useMemo(() => {
@@ -22,11 +24,16 @@ function CanvasMarkerLayer({ pois, onPOIClick, visible }) {
         return pois.features.map(feature => {
             const [lng, lat] = feature.geometry.coordinates;
             const change = feature.properties?.survive_pop_change;
+            const isPs = feature.properties?.poi_type === 'PS';
+            const isIncrease = change !== null && change !== undefined && change >= 0;
             return {
                 lat,
                 lng,
                 feature,
-                isIncrease: change !== null && change !== undefined && change >= 0
+                isIncrease,
+                color: isPs
+                    ? (isIncrease ? PS_INCREASE : PS_DECREASE)
+                    : (isIncrease ? JS_INCREASE : JS_DECREASE),
             };
         });
     }, [pois]);

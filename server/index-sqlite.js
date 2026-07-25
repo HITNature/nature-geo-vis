@@ -84,12 +84,13 @@ function prepareQueries() {
 
     // POIs - 通过 R-Tree 空间查询
     queries.poisByBBox = db.prepare(`
-        SELECT p.id, p.name, p.province, p.city, p.district,
+        SELECT p.id, p.name, p.poi_type, p.province, p.city, p.district,
                p.lng, p.lat, p.survive_pop_change, p.properties
         FROM pois p
         INNER JOIN pois_rtree r ON p.id = r.id
         WHERE r.max_x >= ? AND r.min_x <= ?
           AND r.max_y >= ? AND r.min_y <= ?
+          AND (? = 'all' OR p.poi_type = ? OR (p.poi_type IS NULL AND ? = 'JS'))
     `);
 
     // 聚合数据
@@ -206,29 +207,37 @@ app.get('/api/cells', (req, res) => {
     const [west, south, east, north] = bbox.split(',').map(Number);
     const rows = queries.cellsByBBox.all(west, east, south, north);
 
-    // 直接从行数据构建特征（不使用 geometry 字段以外的 JSON）
-    const features = rows.map((row, idx) => ({
-        type: 'Feature',
-        id: row.id || idx,
-        geometry: JSON.parse(row.geometry),
-        properties: {
-            id: row.cell_id,
-            city: row.city,
-            country: row.country,
-            wpop_change: row.wpop_change,
-            pop_6_11_change: row.pop_6_11_change,
-            pop_12_14_change: row.pop_12_14_change,
-            ed_ps_change: row.ed_ps_change,
-            ed_js_change: row.ed_js_change,
-            PS_2010_count: row.PS_2010_count,
-            PS_2020_count: row.PS_2020_count,
-            JS_2010_count: row.JS_2010_count,
-            JS_2020_count: row.JS_2020_count,
-            // 兼容旧字段名（MapView 中使用）
-            ED_PS_change: row.ed_ps_change,
-            ED_JS_change: row.ed_js_change
+    // properties JSON 含完整新字段；列字段作兜底
+    const features = rows.map((row, idx) => {
+        let props = {};
+        try {
+            props = row.properties ? JSON.parse(row.properties) : {};
+        } catch {
+            props = {};
         }
-    }));
+        return {
+            type: 'Feature',
+            id: row.id || idx,
+            geometry: JSON.parse(row.geometry),
+            properties: {
+                ...props,
+                id: row.cell_id ?? props.id,
+                city: row.city ?? props.city,
+                country: row.country ?? props.country,
+                wpop_change: row.wpop_change ?? props.wpop_change,
+                pop_6_11_change: row.pop_6_11_change ?? props.pop_6_11_change,
+                pop_12_14_change: row.pop_12_14_change ?? props.pop_12_14_change,
+                ed_ps_change: row.ed_ps_change ?? props.ed_ps_change ?? props.ED_PS_change,
+                ed_js_change: row.ed_js_change ?? props.ed_js_change ?? props.ED_JS_change,
+                ED_PS_change: row.ed_ps_change ?? props.ED_PS_change,
+                ED_JS_change: row.ed_js_change ?? props.ED_JS_change,
+                PS_2010_count: row.PS_2010_count ?? props.PS_2010_count,
+                PS_2020_count: row.PS_2020_count ?? props.PS_2020_count,
+                JS_2010_count: row.JS_2010_count ?? props.JS_2010_count,
+                JS_2020_count: row.JS_2020_count ?? props.JS_2020_count,
+            }
+        };
+    });
 
     res.json({ type: 'FeatureCollection', features });
 });
@@ -280,8 +289,9 @@ app.get('/api/pois/city-clusters', (req, res) => {
 
 // API: 获取 POI 数据
 app.get('/api/pois', (req, res) => {
-    const { bbox, zoom } = req.query;
+    const { bbox, zoom, type } = req.query;
     const zoomLevel = parseInt(zoom) || 10;
+    const poiType = (type || 'all').toUpperCase(); // JS | PS | ALL
 
     if (zoomLevel < zoomConfig.poiLevels.detail) {
         return res.json({ type: 'FeatureCollection', features: [] });
@@ -292,24 +302,34 @@ app.get('/api/pois', (req, res) => {
     }
 
     const [west, south, east, north] = bbox.split(',').map(Number);
-    const rows = queries.poisByBBox.all(west, east, south, north);
+    const filter = poiType === 'ALL' ? 'all' : poiType;
+    const rows = queries.poisByBBox.all(west, east, south, north, filter, filter, filter);
 
-    const features = rows.map((row, idx) => ({
-        type: 'Feature',
-        id: row.id || idx,
-        geometry: {
-            type: 'Point',
-            coordinates: [row.lng, row.lat]
-        },
-        properties: {
-            name: row.name,
-            province: row.province,
-            city: row.city,
-            district: row.district,
-            survive_pop_change: row.survive_pop_change,
-            ...(row.properties ? JSON.parse(row.properties) : {})
+    const features = rows.map((row, idx) => {
+        let extra = {};
+        try {
+            extra = row.properties ? JSON.parse(row.properties) : {};
+        } catch {
+            extra = {};
         }
-    }));
+        return {
+            type: 'Feature',
+            id: row.id || idx,
+            geometry: {
+                type: 'Point',
+                coordinates: [row.lng, row.lat]
+            },
+            properties: {
+                ...extra,
+                name: row.name,
+                poi_type: row.poi_type || extra.poi_type || 'JS',
+                province: row.province,
+                city: row.city,
+                district: row.district,
+                survive_pop_change: row.survive_pop_change ?? extra.survive_pop_change,
+            }
+        };
+    });
 
     res.json({ type: 'FeatureCollection', features });
 });
