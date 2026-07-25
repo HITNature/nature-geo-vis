@@ -15,6 +15,7 @@ function App() {
     const [showPsPOI, setShowPsPOI] = useState(true);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [map, setMap] = useState(null);
 
 
     useEffect(() => {
@@ -72,6 +73,7 @@ function App() {
                     showGrid={showGrid}
                     showJsPOI={showJsPOI}
                     showPsPOI={showPsPOI}
+                    onMapInstance={setMap}
                 />
             </div>
 
@@ -104,7 +106,7 @@ function App() {
                 )}
 
                 {/* Bottom Left: Legend */}
-                <Legend onLayerToggle={handleLayerToggle} />
+                <Legend onLayerToggle={handleLayerToggle} map={map} />
 
                 {/* Status Bar / Hint (Floating) */}
                 <div style={{

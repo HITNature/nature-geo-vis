@@ -336,7 +336,7 @@ code,
   bottom: var(--space-lg);
   left: var(--space-lg);
   padding: var(--space-md);
-  min-width: 200px;
+  width: 320px;
 }
 
 .legend-title {
@@ -798,11 +798,8 @@ code,
 
 /* ===== Search Box ===== */
 .search-box-container {
-  position: absolute;
-  top: var(--space-lg);
-  left: var(--space-lg);
-  z-index: 1000;
-  width: 320px;
+  position: relative;
+  width: 100%;
 }
 
 .search-form {
@@ -852,10 +849,10 @@ code,
 
 .search-dropdown {
   position: absolute;
-  top: calc(100% + var(--space-xs));
+  bottom: calc(100% + var(--space-xs));
   left: 0;
   right: 0;
-  max-height: 250px;
+  max-height: 200px;
   overflow-y: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -936,4 +933,9 @@ code,
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Custom styling to make the dark map tiles slightly lighter and more readable */
+.dark-map-tiles {
+  filter: brightness(0.5) contrast(0.7);
 }

@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { useMap } from 'react-leaflet';
 import { apiFetch } from '../utils/api';
 
-function SearchBox() {
-    const map = useMap();
+function SearchBox({ map }) {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const dropdownRef = useRef(null);
+    const isSelectingRef = useRef(false);
 
     // 点击外部关闭下拉框
     useEffect(() => {
@@ -25,6 +24,11 @@ function SearchBox() {
 
     // 监听输入，防抖获取推荐
     useEffect(() => {
+        if (isSelectingRef.current) {
+            isSelectingRef.current = false;
+            return;
+        }
+
         if (!query || query.trim() === '') {
             setSuggestions([]);
             return;
@@ -88,10 +92,14 @@ function SearchBox() {
                     if (first.class === 'boundary') zoom = 10;
                 }
 
-                map.flyTo([lat, lon], zoom, {
-                    animate: true,
-                    duration: 1.5
-                });
+                if (map) {
+                    map.flyTo([lat, lon], zoom, {
+                        animate: true,
+                        duration: 1.5
+                    });
+                } else {
+                    console.warn('Map instance not ready');
+                }
                 
                 // 添加到临时建议中
                 setSuggestions(nominatimData.map(item => ({
@@ -133,11 +141,16 @@ function SearchBox() {
             zoom = 15;
         }
 
-        map.flyTo([lat, lng], zoom, {
-            animate: true,
-            duration: 1.5
-        });
+        if (map) {
+            map.flyTo([lat, lng], zoom, {
+                animate: true,
+                duration: 1.5
+            });
+        } else {
+            console.warn('Map instance not ready');
+        }
 
+        isSelectingRef.current = true;
         setQuery(item.name);
         setShowDropdown(false);
     };
@@ -145,12 +158,12 @@ function SearchBox() {
     // 格式化类型标签
     const getTypeLabel = (type) => {
         switch (type) {
-            case 'province': return '省份';
-            case 'city': return '城市';
-            case 'district': return '区县';
-            case 'poi': return '地标/学校';
-            case 'osm': return '外部地址';
-            default: return '地点';
+            case 'province': return 'Province';
+            case 'city': return 'City';
+            case 'district': return 'District/County'; // 也可以用 'District/County'
+            case 'poi': return 'POI/School';
+            case 'osm': return 'Map Address'; // Osm指OpenStreetMap，
+            default: return 'Location'; // 也可以用 'Place'
         }
     };
 
@@ -159,7 +172,7 @@ function SearchBox() {
             <form onSubmit={handleSearch} className="search-form glass-panel">
                 <input
                     type="text"
-                    placeholder="搜索地址或学校 (如: 哈尔滨)..."
+                    placeholder="Search address or school (e.g., 哈尔滨)…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => query && suggestions.length > 0 && setShowDropdown(true)}

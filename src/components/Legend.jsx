@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import SearchBox from './SearchBox';
 
-function Legend({ onLayerToggle }) {
+function Legend({ onLayerToggle, map }) {
     const [showGrid, setShowGrid] = useState(true);
     const [showJsPOI, setShowJsPOI] = useState(true);
     const [showPsPOI, setShowPsPOI] = useState(true);
@@ -117,6 +118,11 @@ function Legend({ onLayerToggle }) {
                     </div>
                 </div>
             )}
+
+            {/* Search Box integrated directly below the Legend controls */}
+            <div style={{ marginTop: 'var(--space-md)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-md)' }}>
+                <SearchBox map={map} />
+            </div>
         </div>
     );
 }

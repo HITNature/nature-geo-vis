@@ -6,7 +6,6 @@ import { perf } from '../utils/perf';
 import { apiFetch } from '../utils/api';
 import CanvasMarkerLayer from './CanvasMarkerLayer';
 import OffscreenCanvasLayer from './OffscreenCanvasLayer';
-import SearchBox from './SearchBox';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -68,7 +67,7 @@ const cellStyle = (feature) => {
 };
 
 // 地图事件处理组件
-function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }) {
+function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature, onMapInstance }) {
     const map = useMapEvents({
         zoomstart: () => {
             perf.addHistory('Zoom animation started');
@@ -114,6 +113,13 @@ function MapEvents({ onZoomChange, onMoveEnd, onLoadingChange, selectedFeature }
         }
     }, [selectedFeature, map]);
 
+    // 当地图实例创建好后，传递给父组件
+    useEffect(() => {
+        if (map && onMapInstance) {
+            onMapInstance(map);
+        }
+    }, [map, onMapInstance]);
+
     return null;
 }
 
@@ -129,6 +135,7 @@ function MapView({
     showJsPOI = true,
     showPsPOI = true,
     showPOI = true, // 兼容旧 prop：任一为 true 即显示
+    onMapInstance,
 }) {
     const [pois, setPois] = useState(null);
     const [boundaries, setBoundaries] = useState(null);
@@ -339,10 +346,10 @@ function MapView({
             whenReady={() => setIsMapLoading(false)}
         >
             <ZoomControl position="bottomright" />
-            <SearchBox />
             <TileLayer
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                className="dark-map-tiles"
                 // Performance optimizations
                 keepBuffer={4}              // Keep 4 tiles outside viewport in memory
                 updateWhenZooming={false}   // Don't update during zoom animation
@@ -362,6 +369,7 @@ function MapView({
                 onMoveEnd={handleMoveEnd}
                 onLoadingChange={setIsMapLoading}
                 selectedFeature={selectedFeature}
+                onMapInstance={onMapInstance}
             />
 
             {/* 静态图层：行政区划边界 */}
