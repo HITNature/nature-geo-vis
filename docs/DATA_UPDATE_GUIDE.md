@@ -92,7 +92,9 @@ graph TD
         - **解决方案**：
           1. 本地运行 `npm run update-from-nc` 和 `npm run import-data` 生成最新的、带有新字段的 `data/geodata.db`。
           2. 使用 GitHub CLI 或网页端，将最新的 `geodata.db` **重新上传覆盖（Clobber）** 到当前的 GitHub Release（`v1.0.0-data`）中。
-          3. 在 Railway 控制面板中，确保环境变量 `FORCE_DB_DOWNLOAD=true`，然后点击 **Redeploy**（重新部署）或 **Restart**（重启）。容器启动时会强制删除旧库并拉取最新的正确数据库，服务即可完美复活。
+          3. 获取本地 `data/geodata.db` 的精确字节数（macOS 运行 `stat -f %z data/geodata.db`，Linux 运行 `stat -c %s data/geodata.db`），得到一个数字如 `433405952`。
+          4. 在 Railway 控制面板中，将环境变量 **`GEODATA_DB_SIZE`** 的值更新为该精确字节数。
+          5. 重新部署 Railway。启动脚本 `ensure-db.js` 会对比本地硬盘上的数据库与该环境变量，如果大小不匹配，会自动删除旧库并从 `GEODATA_DB_URL` 重新下载最新的正确数据库。
 -   **Q: 为什么 Railway 上运行不起来？**
     -   检查 `GEODATA_DB_URL` 链接是否有效，或者是否忘记挂载持久化 Volume。没有 Volume 的话，重启可能导致数据库文件丢失需要重下。
 -   **Q: 字段名变了怎么办？**

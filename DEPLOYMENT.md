@@ -190,7 +190,24 @@ curl https://nature-geo-vis-server-production.up.railway.app/api/config
 - **解决 Schema 不匹配**：
   1. 本地运行 `npm run update-from-nc` 和 `npm run import-data` 重新生成带有新字段的 `data/geodata.db`。
   2. 使用 `gh release upload v1.0.0-data data/geodata.db --clobber` 将最新数据库覆盖上传到 GitHub Release。
-  3. 在 Railway 中确保 `FORCE_DB_DOWNLOAD=true`，点击 **Redeploy** 或 **Restart** 强制重新下载最新数据库。
+  3. 获取本地 `data/geodata.db` 的精确字节数（macOS 运行 `stat -f %z data/geodata.db`，Linux 运行 `stat -c %s data/geodata.db`），得到一个数字如 `433405952`。
+  4. 在 Railway 后端控制面板中，将环境变量 **`GEODATA_DB_SIZE`** 的值更新为该精确字节数，并确保 `GEODATA_DB_URL` 指向 GitHub Release 的下载直连。
+  5. 重新部署 Railway。启动脚本 `ensure-db.js` 会对比本地硬盘上的数据库与 `GEODATA_DB_SIZE`，如果大小不匹配，会自动删除旧库并拉取最新的正确数据库。
+
+### 问题 3: 线上数据省市不匹配（如点击哈尔滨网格显示为吉林省）
+**可能原因**：
+- 原始地理数据库的 `GCs_level`（网格表）中，网格所属的 `province` 录入存在大面积逻辑错误（如哈尔滨网格被写成吉林省，齐齐哈尔网格被写成内蒙古）。
+- 新旧地理数据库的 `OBJECTID` 发生漂移错位，导致属性合并时发生错位。
+
+**解决方案**：
+1. 确保在 `scripts/update-from-nc.js` 中，**统一使用唯一的“城市名称 / POI 名称”进行对齐匹配**，禁止使用 `OBJECTID`。
+2. 在 `update-from-nc.js` 的 `updateCells` 逻辑中，加载 `city_level` 表中正确的 `城市 -> 省份` 映射，对网格的省份进行强制清洗和校正。
+3. 本地重新运行数据清洗与导入：
+   ```bash
+   npm run update-from-nc
+   npm run import-data
+   ```
+4. 按照 **问题 2** 中的步骤，将更新后的 `geodata.db` 覆盖上传至 GitHub Release，并更新 Railway 的 `GEODATA_DB_SIZE` 环境变量重新部署。
 
 ### 问题 3: 地图加载缓慢
 **优化建议**：
