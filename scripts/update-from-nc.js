@@ -126,7 +126,14 @@ function updateCells() {
     console.log(`  ✅ 网格属性更新 ${updated}，未匹配 ${missing}（源表 ${rows.length}）`);
 }
 
-/** city_level → cities.geojson */
+/** 
+ * city_level → cities.geojson 
+ * 
+ * ⚠️ 避坑指南/关键逻辑：
+ * 绝不能使用 OBJECTID 进行对齐！因为新旧地理数据库中，部分城市的 OBJECTID 发生了错位漂移。
+ * 例如：旧 geo 中 OBJECTID: 105 对应绥化市，而新库中该 ID 对应丹东市，若按 ID 对齐会导致严重的边界与属性错乱。
+ * 解决方案：改用唯一的“城市名称 (name)”作为主键进行对齐，确保属性完美套在正确的空间几何上。
+ */
 function updateCities() {
     console.log('\n📦 更新城市 city_level → cities.geojson...');
     const rows = db.prepare(`SELECT * FROM city_level`).all();
@@ -158,7 +165,13 @@ function updateCities() {
     console.log(`  ✅ 城市属性更新 ${updated}/${rows.length}，未匹配 ${missing}`);
 }
 
-/** JS_POI_level + 旧行政字段 → pois.geojson */
+/** 
+ * JS_POI_level + 旧行政字段 → pois.geojson 
+ * 
+ * ⚠️ 避坑指南：
+ * 同样为了避免 OBJECTID 漂移导致学校的省市区行政字段归属错误，
+ * 这里也改为使用“学校名称 (name)”作为主键与旧 pois.geojson 进行对齐合并。
+ */
 function updateJsPois() {
     console.log('\n📦 更新初中 POI JS_POI_level → pois.geojson...');
     const oldPoisPath = path.join(dataDir, 'pois.geojson');
