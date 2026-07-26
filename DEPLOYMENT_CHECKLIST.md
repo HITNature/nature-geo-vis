@@ -1,13 +1,23 @@
 # 部署检查清单
 
-在部署到生产环境之前，请确保完成以下检查项：
+在部署到生产环境之前，请确保完成以下检查项。
+
+## 已部署地址
+
+| 平台 | URL | 状态 |
+|------|-----|------|
+| GitHub | https://github.com/HITNature/nature-geo-vis | ✅ |
+| 后端 API（Railway） | https://nature-geo-vis-server-production.up.railway.app | ✅ |
+| 前端应用（Cloudflare Pages） | https://nature-geo-vis.pages.dev | ✅ |
+
+---
 
 ## 📋 部署前检查
 
 ### 代码准备
-- [ ] 所有代码已提交到 Git 仓库
-- [ ] 已推送到远程仓库（GitHub/GitLab）
-- [ ] 确认 `main` 或 `master` 分支是最新版本
+- [x] 所有代码已提交到 Git 仓库
+- [x] 已推送到远程仓库（GitHub）
+- [x] 确认 `main` 分支是最新版本
 
 ### 数据文件
 - [ ] `data/boundaries.geojson` 存在且有效
@@ -17,55 +27,54 @@
 - [ ] 数据文件未被 `.gitignore` 排除
 
 ### 配置文件
-- [ ] `.env.example` 已创建
-- [ ] `.env.development` 已创建
-- [ ] `vercel.json` 已创建
-- [ ] `railway.toml` 或 `render.yaml` 已创建
+- [x] `.env.example` 已创建
+- [x] `.env.development` 已创建
+- [x] `railway.toml` 已创建
+- [x] `public/_redirects` 已创建（Cloudflare Pages SPA 回退）
 
 ### 代码检查
-- [ ] 所有 API 调用使用 `apiFetch` 而非 `fetch`
-- [ ] 服务器配置使用环境变量（`process.env.PORT`）
-- [ ] CORS 配置支持环境变量（`process.env.FRONTEND_URL`）
+- [x] 所有 API 调用使用 `apiFetch` 而非 `fetch`
+- [x] 服务器配置使用环境变量（`process.env.PORT`）
+- [x] CORS 配置支持环境变量（`process.env.FRONTEND_URL`）
 
 ---
 
 ## 🚀 后端部署（Railway）
 
 ### 1. 创建项目
-- [ ] 访问 [railway.app](https://railway.app/)
-- [ ] 使用 GitHub 账号登录
-- [ ] 选择 "Deploy from GitHub repo"
-- [ ] 选择 `nature-geo-vis` 仓库
+- [x] 访问 [railway.app](https://railway.app/)
+- [x] 使用 GitHub 账号登录
+- [x] 选择 "Deploy from GitHub repo"
+- [x] 选择 `HITNature/nature-geo-vis` 仓库
 
 ### 2. 配置环境变量
 在 Variables 面板添加：
-- [ ] `NODE_ENV` = `production`
-- [ ] `FRONTEND_URL` = （暂时留空，等待前端部署完成）
+- [x] `NODE_ENV` = `production`
+- [x] `FRONTEND_URL` = `https://nature-geo-vis.pages.dev`
 
 ### 3. 验证部署
-- [ ] 部署成功（绿色状态）
-- [ ] 记录后端 URL：`___________________________`
-- [ ] 测试 API：`curl https://your-backend.railway.app/api/config`
+- [x] 部署成功（绿色状态）
+- [x] 后端 URL：`https://nature-geo-vis-server-production.up.railway.app`
+- [ ] 测试 API：`curl https://nature-geo-vis-server-production.up.railway.app/api/config`
 - [ ] API 返回正常 JSON
 
 ---
 
-## 🌐 前端部署（Vercel）
+## 🌐 前端部署（Cloudflare Pages）
 
 ### 1. 创建项目
-- [ ] 访问 [vercel.com](https://vercel.com/)
-- [ ] 使用 GitHub 账号登录
-- [ ] 选择 `nature-geo-vis` 仓库
-- [ ] 确认框架为 Vite
+- [x] 访问 [Cloudflare Dashboard](https://dash.cloudflare.com/) → Workers & Pages
+- [x] 使用 GitHub 账号连接仓库
+- [x] 选择 `HITNature/nature-geo-vis` 仓库
+- [x] 确认 Build command = `npm run build`，Output = `dist`
 
 ### 2. 配置环境变量
 在 Environment Variables 添加：
-- [ ] `VITE_API_BASE_URL` = `https://your-backend.railway.app`
+- [x] `VITE_API_BASE_URL` = `https://nature-geo-vis-server-production.up.railway.app`
 
 ### 3. 部署
-- [ ] 点击 "Deploy"
-- [ ] 构建成功（约 1-2 分钟）
-- [ ] 记录前端 URL：`___________________________`
+- [x] 构建成功
+- [x] 前端 URL：`https://nature-geo-vis.pages.dev`
 
 ### 4. 验证部署
 - [ ] 访问前端 URL
@@ -78,9 +87,9 @@
 ## 🔄 更新后端 CORS 配置
 
 ### Railway
-- [ ] 返回 Railway 项目
-- [ ] 进入 Variables
-- [ ] 更新 `FRONTEND_URL` = `https://your-frontend.vercel.app`
+- [x] 返回 Railway 项目
+- [x] 进入 Variables
+- [x] 更新 `FRONTEND_URL` = `https://nature-geo-vis.pages.dev`
 - [ ] 保存（自动触发重新部署）
 - [ ] 等待重新部署完成
 
@@ -123,13 +132,13 @@
 
 ### 设置监控
 - [ ] 查看 Railway Metrics（CPU/内存使用）
-- [ ] 查看 Vercel Analytics（访问量/性能）
+- [ ] 查看 Cloudflare Analytics（访问量/性能）
 - [ ] （可选）集成 Sentry 错误监控
 
 ### 文档更新
-- [ ] 在 README 中填写实际部署 URL
+- [x] 在 README 中填写实际部署 URL
 - [ ] 团队成员能访问部署链接
-- [ ] 更新项目文档中的演示地址
+- [x] 更新项目文档中的演示地址
 
 ---
 
@@ -137,8 +146,9 @@
 
 | 服务 | URL | 状态 |
 |------|-----|------|
-| 后端 API | `https://___________________________` | ⬜ 待部署 |
-| 前端应用 | `https://___________________________` | ⬜ 待部署 |
+| GitHub | https://github.com/HITNature/nature-geo-vis | ✅ |
+| 后端 API | https://nature-geo-vis-server-production.up.railway.app | ✅ |
+| 前端应用 | https://nature-geo-vis.pages.dev | ✅ |
 
 ---
 
@@ -146,13 +156,13 @@
 
 ### 问题：前端显示 CORS 错误
 **解决方案**：
-1. 确认后端 `FRONTEND_URL` 设置正确
+1. 确认后端 `FRONTEND_URL` = `https://nature-geo-vis.pages.dev`
 2. 确认 URL 末尾没有 `/`
 3. 等待后端重新部署完成
 
 ### 问题：前端无法加载数据
 **解决方案**：
-1. 检查 `VITE_API_BASE_URL` 是否正确
+1. 检查 `VITE_API_BASE_URL` 是否为 `https://nature-geo-vis-server-production.up.railway.app`
 2. 在浏览器访问 `{VITE_API_BASE_URL}/api/config` 测试
 3. 确认后端服务正在运行
 
@@ -168,8 +178,8 @@
 
 - **部署文档**: 查看 [DEPLOYMENT.md](./DEPLOYMENT.md)
 - **Railway 文档**: https://docs.railway.app/
-- **Vercel 文档**: https://vercel.com/docs
-- **项目 Issues**: 在 GitHub 提交问题
+- **Cloudflare Pages 文档**: https://developers.cloudflare.com/pages/
+- **项目 Issues**: https://github.com/HITNature/nature-geo-vis/issues
 
 ---
 
@@ -177,7 +187,7 @@
 
 **部署人员**: ____________________
 
-**备注**: 
+**备注**:
 ```
 
 

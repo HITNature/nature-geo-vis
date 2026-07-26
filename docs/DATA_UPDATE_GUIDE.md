@@ -86,6 +86,13 @@ graph TD
     -   **A**: 这是因为新旧地理数据库的 `OBJECTID` 发生了漂移错位。在运行数据属性合并脚本时，**千万不能使用 OBJECTID 匹配**。`scripts/update-from-nc.js` 已被修改为**统一使用唯一的“城市名称 / POI 名称”进行对齐匹配**。在未来更新数据时，请务必保持这一原则。
 -   **Q: 为什么本地修改了后端代码（如新增 API），前端请求却一直报 404？**
     -   **A**: 前端（Vite）具有热重载（HMR）功能，修改前端代码会自动刷新页面；但后端 Node.js/Express 服务默认没有热重载。如果修改了后端接口，**需要手动在控制台重启后端服务**（或者重新运行 `npm run web`）以注册新路由。
+-   **Q: 为什么 Railway 部署后，后端服务启动直接 Crash，报错类似 `no such column: p.poi_type`？**
+    -   **A**: 这是由于 **“后端代码升级与云端数据库 Schema 不匹配”** 导致的。
+        - **起因**：我们在后端代码中新增了字段查询（如 `p.poi_type`），但 Railway 启动时，自动从 GitHub Release（如 `v1.0.0-data`）下载的依然是**未更新的旧版数据库**。新代码查询旧数据库，找不到新增列，导致服务直接崩溃。
+        - **解决方案**：
+          1. 本地运行 `npm run update-from-nc` 和 `npm run import-data` 生成最新的、带有新字段的 `data/geodata.db`。
+          2. 使用 GitHub CLI 或网页端，将最新的 `geodata.db` **重新上传覆盖（Clobber）** 到当前的 GitHub Release（`v1.0.0-data`）中。
+          3. 在 Railway 控制面板中，确保环境变量 `FORCE_DB_DOWNLOAD=true`，然后点击 **Redeploy**（重新部署）或 **Restart**（重启）。容器启动时会强制删除旧库并拉取最新的正确数据库，服务即可完美复活。
 -   **Q: 为什么 Railway 上运行不起来？**
     -   检查 `GEODATA_DB_URL` 链接是否有效，或者是否忘记挂载持久化 Volume。没有 Volume 的话，重启可能导致数据库文件丢失需要重下。
 -   **Q: 字段名变了怎么办？**

@@ -2,11 +2,21 @@
 
 本文档详细说明如何将 Nature Geo Vis 项目部署到生产环境。
 
+## 已部署地址
+
+| 平台 | 地址 |
+|------|------|
+| GitHub | https://github.com/HITNature/nature-geo-vis |
+| 前端（Cloudflare Pages） | https://nature-geo-vis.pages.dev |
+| 后端（Railway） | https://nature-geo-vis-server-production.up.railway.app |
+
 ## 部署架构
 
 采用**前后端分离部署**方案：
-- **前端**：部署到 **Vercel** 或 **Cloudflare Pages**（见下文「中国大陆访问」）
-- **后端**：部署到 Railway 或 Render（支持 Node.js 长期运行服务）
+- **前端**：部署到 **Cloudflare Pages**（全球 CDN + 自动构建）
+- **后端**：部署到 **Railway**（支持 Node.js 长期运行服务）
+
+---
 
 ## 部署前准备
 
@@ -22,9 +32,11 @@ git add .
 # 提交更改
 git commit -m "chore: prepare for deployment"
 
-# 推送到远程仓库（GitHub/GitLab）
+# 推送到远程仓库
 git push origin main
 ```
+
+仓库地址：https://github.com/HITNature/nature-geo-vis
 
 ### 2. 准备数据文件
 
@@ -38,9 +50,7 @@ git push origin main
 
 ---
 
-## 第一步：部署后端
-
-### 选项 A: 使用 Railway（推荐）
+## 第一步：部署后端（Railway）
 
 #### 1. 创建 Railway 账号
 访问 [railway.app](https://railway.app/) 并使用 GitHub 账号登录。
@@ -48,7 +58,7 @@ git push origin main
 #### 2. 创建新项目
 1. 点击 "New Project"
 2. 选择 "Deploy from GitHub repo"
-3. 选择 `nature-geo-vis` 仓库
+3. 选择 `HITNature/nature-geo-vis` 仓库
 4. Railway 会自动检测到 Node.js 项目
 
 #### 3. 配置环境变量
@@ -58,83 +68,51 @@ git push origin main
 |--------|-----|------|
 | `PORT` | （自动设置） | Railway 自动分配 |
 | `NODE_ENV` | `production` | 生产环境标识 |
-| `FRONTEND_URL` | （待填写） | 第二步部署前端后获得 |
+| `FRONTEND_URL` | `https://nature-geo-vis.pages.dev` | 前端域名（CORS） |
+
+若前端尚未部署完成，可先将 `FRONTEND_URL` 设为 `*`，第二步完成后再改回正式域名。
 
 #### 4. 部署
 - Railway 会自动运行 `npm install` 和 `npm run server`
 - 等待部署完成（约 2-3 分钟）
-- 记录分配的 URL，例如：`https://nature-geo-vis-server-production.up.railway.app`
+- 生产后端 URL：`https://nature-geo-vis-server-production.up.railway.app`
 
 ---
 
-## 第二步：部署前端
+## 第二步：部署前端（Cloudflare Pages）
 
-### 使用 Vercel
+#### 1. 创建项目
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. 进入 **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+3. 选择 `HITNature/nature-geo-vis` 仓库
 
-#### 1. 创建 Vercel 账号
-访问 [vercel.com](https://vercel.com/) 并使用 GitHub 账号登录。
+#### 2. 配置构建设置
+- **Build command**：`npm run build`
+- **Build output directory**：`dist`
+- 可选：添加 `NODE_VERSION` = `18`
 
-#### 2. 导入项目
-1. 点击 "Add New..." → "Project"
-2. 选择 `nature-geo-vis` 仓库
-3. Vercel 会自动检测到 Vite 项目
-
-#### 3. 配置构建设置
-保持默认配置：
-- **Framework Preset**: Vite
-- **Build Command**: `npm run build`
-- **Output Directory**: `dist`
-- **Install Command**: `npm install`
-
-#### 4. 配置环境变量
-添加以下环境变量：
+#### 3. 配置环境变量
 
 | Name | Value | 说明 |
 |------|-------|------|
-| `VITE_API_BASE_URL` | `https://nature-geo-vis-server-production.up.railway.app` | 替换为第一步获得的后端 URL 不允许后面带/否则请求出错 |
+| `VITE_API_BASE_URL` | `https://nature-geo-vis-server-production.up.railway.app` | 后端 URL，**末尾不要加 `/`** |
 
-**重要**：将 `your-backend.railway.app` 替换为您在第一步中获得的实际后端 URL。
-
-#### 5. 部署
-- 点击 "Deploy"
-- 等待构建完成（约 1-2 分钟）
-- 获得前端 URL，例如：`https://nature-geo-vis.vercel.app` 
-
-### 中国大陆无法访问 Vercel 怎么办？
-
-`*.vercel.app` 等默认域名在中国大陆常被墙或极慢，**不是项目配置错误**，无法通过改代码修复。
-
-**推荐做法**：再部署一份前端到 **Cloudflare Pages**（与 Vercel 共用同一 Git 仓库即可），把 `*.pages.dev` 或自定义域名作为大陆用户入口。
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/) → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-2. 选择本仓库，构建设置：
-   - **Build command**：`npm run build`
-   - **Build output directory**：`dist`
-3. **Environment variables**：添加 `VITE_API_BASE_URL`（与 Vercel 相同，指向 Railway 后端 URL，**末尾不要加 `/`**）
-4. 可选：添加 `NODE_VERSION` = `18`
-5. 保存并部署。仓库已包含 `public/_redirects`，用于 SPA 路由回退。
-
-部署完成后：
-- 将 Railway 的 `FRONTEND_URL` 改为**你实际给用户用的前端域名**（若需严格 CORS，可同时配置多个来源需改 `server/config.js` 或环境变量逻辑；当前默认 `*` 时无需改）
-- 大陆用户访问 **Cloudflare Pages** 地址；海外用户可继续用 Vercel
+#### 4. 部署
+- 保存并部署（约 1-2 分钟）
+- 生产前端 URL：`https://nature-geo-vis.pages.dev`
+- 仓库已包含 `public/_redirects`，用于 SPA 路由回退
 
 **其他选项**：自有域名经 Cloudflare DNS 代理指向前端；或国内云 + CDN（通常需 **ICP 备案**）。
 
 ---
 
-## 第三步：配置 CORS
+## 第三步：确认 CORS
 
-返回后端部署平台（Railway 或 Render），更新 `FRONTEND_URL` 环境变量：
+返回 Railway，确认 `FRONTEND_URL` 环境变量：
 
-### Railway
 1. 进入项目 → Variables
-2. 更新 `FRONTEND_URL` 为前端 URL（例如：`https://nature-geo-vis.vercel.app`）
-3. 保存后会自动重新部署
-
-### Render
-1. 进入 Web Service → Environment
-2. 更新 `FRONTEND_URL` 为前端 URL
-3. 点击 "Save Changes"，触发重新部署
+2. 确认 `FRONTEND_URL` = `https://nature-geo-vis.pages.dev`
+3. 保存后会自动重新部署（若需严格 CORS，可同时配置多个来源需改 `server/config.js`；当前默认 `*` 时无需改）
 
 ---
 
@@ -142,14 +120,13 @@ git push origin main
 
 ### 1. 测试后端 API
 ```bash
-# 替换为您的后端 URL
-curl https://your-backend.railway.app/api/config
+curl https://nature-geo-vis-server-production.up.railway.app/api/config
 ```
 
 应返回配置 JSON。
 
 ### 2. 测试前端
-访问前端 URL（例如：`https://nature-geo-vis.vercel.app`）：
+访问 https://nature-geo-vis.pages.dev ：
 - 地图应正常加载
 - 放大地图，POI 数据应正常显示
 - 检查浏览器控制台，确保没有 CORS 错误
@@ -162,19 +139,19 @@ curl https://your-backend.railway.app/api/config
 
 ## 环境变量总结
 
-### 后端环境变量（Railway/Render）
+### 后端环境变量（Railway）
 
 | 变量名 | 开发环境 | 生产环境 | 说明 |
 |--------|----------|----------|------|
 | `PORT` | `3001` | （平台自动设置） | 服务器端口 |
 | `NODE_ENV` | `development` | `production` | 运行环境 |
-| `FRONTEND_URL` | `*` | `https://nature-geo-vis.vercel.app` | 前端域名（CORS） |
+| `FRONTEND_URL` | `*` | `https://nature-geo-vis.pages.dev` | 前端域名（CORS） |
 
-### 前端环境变量（Vercel）
+### 前端环境变量（Cloudflare Pages）
 
 | 变量名 | 开发环境 | 生产环境 | 说明 |
 |--------|----------|----------|------|
-| `VITE_API_BASE_URL` | （空，使用 proxy） | `https://your-backend.railway.app` | 后端 API 地址 |
+| `VITE_API_BASE_URL` | （空，使用 proxy） | `https://nature-geo-vis-server-production.up.railway.app` | 后端 API 地址 |
 
 ---
 
@@ -186,9 +163,8 @@ curl https://your-backend.railway.app/api/config
 - 无需手动操作
 
 ### 手动触发
-- **Vercel**: Deployments → Redeploy
+- **Cloudflare Pages**: Deployments → Retry deployment
 - **Railway**: Deployments → Deploy
-- **Render**: Manual Deploy → Deploy latest commit
 
 ---
 
@@ -200,20 +176,25 @@ curl https://your-backend.railway.app/api/config
 **解决方案**：
 1. 检查浏览器控制台是否有 CORS 错误
 2. 确认后端 `FRONTEND_URL` 环境变量正确
-3. 确认前端 `VITE_API_BASE_URL` 正确
+3. 确认前端 `VITE_API_BASE_URL` 正确（末尾无 `/`）
 
-### 问题 2: 后端部署失败
+### 问题 2: 后端部署失败或启动崩溃 (Crashed)
 **可能原因**：
 - 依赖安装失败 → 检查 `package.json`
-- 数据文件太大 → 考虑使用外部存储（S3/Cloudflare R2）
+- 数据文件太大 → 考虑使用外部存储（S3/Cloudflare R2）或 GitHub Release + Volume
+- **Schema 不匹配崩溃**：如果后端代码升级了（例如新增了 POI 类型 `poi_type` 字段的查询），但 Railway 启动时下载的仍是 GitHub Release 上的旧版数据库，会因 `no such column: p.poi_type` 报错直接 Crash。
 
 **解决方案**：
-- 查看部署日志
-- 确保 `data/` 目录未被 `.gitignore` 排除
+- 查看部署日志。
+- 确保 `data/` 目录未被 `.gitignore` 排除。
+- **解决 Schema 不匹配**：
+  1. 本地运行 `npm run update-from-nc` 和 `npm run import-data` 重新生成带有新字段的 `data/geodata.db`。
+  2. 使用 `gh release upload v1.0.0-data data/geodata.db --clobber` 将最新数据库覆盖上传到 GitHub Release。
+  3. 在 Railway 中确保 `FORCE_DB_DOWNLOAD=true`，点击 **Redeploy** 或 **Restart** 强制重新下载最新数据库。
 
 ### 问题 3: 地图加载缓慢
 **优化建议**：
-1. 启用 Vercel 的 Edge Caching
+1. 依赖 Cloudflare CDN 缓存静态资源
 2. 考虑升级后端为付费实例（更多资源）
 3. 使用 CDN 加速数据文件访问
 
@@ -222,25 +203,24 @@ curl https://your-backend.railway.app/api/config
 ## 成本估算
 
 ### 免费方案
-- **Vercel**: 免费（每月 100 GB 带宽）
-- **Railway**: 免费（每月 $5 额度，约 500 小时运行时间）
-- **Render**: 免费（但有冷启动延迟）
+- **Cloudflare Pages**: 免费（含全球 CDN）
+- **Railway**: 免费额度有限（按用量计费）
 
 ### 推荐方案（小规模使用）
-- **前端**: Vercel 免费
-- **后端**: Railway 免费
-- **总成本**: $0/月
+- **前端**: Cloudflare Pages 免费
+- **后端**: Railway 免费额度
+- **总成本**: 约 $0/月（超出额度后按用量）
 
 ### 升级方案（高流量）
-- **前端**: Vercel Pro ($20/月)
-- **后端**: Railway Starter ($5/月)
-- **总成本**: $25/月
+- **前端**: Cloudflare Pages（通常仍可免费）
+- **后端**: Railway Starter（约 $5/月起）
+- **总成本**: 约 $5+/月
 
 ---
 
 ## 安全建议
 
-1. **限制 CORS**：不要在生产环境使用 `*`，明确指定前端域名
+1. **限制 CORS**：不要在生产环境使用 `*`，明确指定前端域名 `https://nature-geo-vis.pages.dev`
 2. **数据验证**：在 API 层添加输入验证
 3. **速率限制**：考虑添加 API 速率限制（防止滥用）
 4. **HTTPS**：两个平台默认启用 HTTPS
@@ -265,7 +245,7 @@ curl https://your-backend.railway.app/api/config
 
 ## 相关资源
 
-- [Vercel 文档](https://vercel.com/docs)
+- [Cloudflare Pages 文档](https://developers.cloudflare.com/pages/)
 - [Railway 文档](https://docs.railway.app/)
-- [Render 文档](https://render.com/docs)
 - [Vite 部署指南](https://vitejs.dev/guide/static-deploy.html)
+- [GitHub 仓库](https://github.com/HITNature/nature-geo-vis)

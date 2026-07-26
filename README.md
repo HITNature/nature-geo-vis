@@ -1,6 +1,11 @@
 # 教育资源分布可视化
 > Github: https://github.com/HITNature/nature-geo-vis
+
 数据可视化项目，用于展示和探索基于geodatabase的教育资源分布数据。
+
+**在线访问**
+- **前端**：https://nature-geo-vis.pages.dev
+- **后端 API**：https://nature-geo-vis-server-production.up.railway.app
 
 ## 项目概述
 
@@ -164,20 +169,26 @@ npm run dev
 ## 生产部署
 
 本项目采用**前后端分离部署**方案：
-- **前端**：部署到 Vercel（全球 CDN + 自动构建）
-- **后端**：部署到 Railway 或 Render（Node.js 长期服务）
+- **前端**：Cloudflare Pages（全球 CDN + 自动构建）
+- **后端**：Railway（Node.js 长期服务）
+
+| 平台 | 项目 / 域名 |
+|------|-------------|
+| GitHub | [HITNature/nature-geo-vis](https://github.com/HITNature/nature-geo-vis) |
+| Cloudflare Pages | https://nature-geo-vis.pages.dev |
+| Railway | https://nature-geo-vis-server-production.up.railway.app |
 
 ### 快速部署
 
-1. **部署后端**（Railway 推荐）：
+1. **部署后端**（Railway）：
    - 访问 [railway.app](https://railway.app/)
-   - 连接 GitHub 仓库
-   - 配置环境变量 `FRONTEND_URL`
+   - 连接 GitHub 仓库 `HITNature/nature-geo-vis`
+   - 配置环境变量 `FRONTEND_URL=https://nature-geo-vis.pages.dev`
 
-2. **部署前端**（Vercel）：
-   - 访问 [vercel.com](https://vercel.com/)
-   - 连接 GitHub 仓库
-   - 配置环境变量 `VITE_API_BASE_URL`（填入后端 URL）
+2. **部署前端**（Cloudflare Pages）：
+   - 访问 [Cloudflare Dashboard](https://dash.cloudflare.com/) → Workers & Pages
+   - 连接同一 GitHub 仓库
+   - 配置环境变量 `VITE_API_BASE_URL=https://nature-geo-vis-server-production.up.railway.app`（末尾不要加 `/`）
 
 📖 **详细部署指南**: 查看 [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 
@@ -188,18 +199,17 @@ npm run dev
 VITE_API_BASE_URL=  # 留空，使用 Vite proxy
 ```
 
-**生产环境** (Vercel):
+**生产环境** (Cloudflare Pages):
 ```bash
-VITE_API_BASE_URL=https://your-backend.railway.app
+VITE_API_BASE_URL=https://nature-geo-vis-server-production.up.railway.app
 ```
 
-**后端环境** (Railway/Render):
+**后端环境** (Railway):
 ```bash
 PORT=3001  # 开发环境，生产环境由平台自动设置
 NODE_ENV=production
-FRONTEND_URL=https://your-frontend.vercel.app
+FRONTEND_URL=https://nature-geo-vis.pages.dev
 ```
-
 ## API接口
 
 ### 配置接口

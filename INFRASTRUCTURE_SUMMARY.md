@@ -2,7 +2,15 @@
 
 ## 改造概览
 
-为支持前后端分离部署（Vercel + Railway/Render），对项目进行了以下基础设施改造。
+为支持前后端分离部署（**Cloudflare Pages + Railway**），对项目进行了以下基础设施改造。
+
+## 已部署地址
+
+| 平台 | 地址 |
+|------|------|
+| GitHub | https://github.com/HITNature/nature-geo-vis |
+| 前端（Cloudflare Pages） | https://nature-geo-vis.pages.dev |
+| 后端（Railway） | https://nature-geo-vis-server-production.up.railway.app |
 
 ---
 
@@ -16,7 +24,7 @@
 
 #### 代码改动
 - **`server/config.js`**:
-  - `port`: 支持 `process.env.PORT`（Railway/Render 动态分配）
+  - `port`: 支持 `process.env.PORT`（Railway 动态分配）
   - `corsOrigin`: 支持 `process.env.FRONTEND_URL`（安全的 CORS 配置）
 
 **好处**：
@@ -62,9 +70,9 @@
 
 ### 4. 部署配置文件 🚀
 
-#### 新增文件
-- **`vercel.json`** - Vercel 前端部署配置
+#### 新增 / 使用中的文件
 - **`railway.toml`** - Railway 后端部署配置
+- **`public/_redirects`** - Cloudflare Pages SPA 路由回退
 - **`render.yaml`** - Render 后端部署配置（备选）
 
 **好处**：
@@ -131,12 +139,10 @@
    - 2,679 个区县级聚合
 ```
 
-### 未测试项（需要部署后验证）
-- ⏳ 生产环境 API 请求
-- ⏳ CORS 跨域配置
-- ⏳ 环境变量读取
-- ⏳ Vercel 构建流程
-- ⏳ Railway/Render 部署流程
+### 生产环境
+- ✅ Cloudflare Pages 前端：https://nature-geo-vis.pages.dev
+- ✅ Railway 后端：https://nature-geo-vis-server-production.up.railway.app
+- ⏳ CORS / 环境变量联调（按需核对 `FRONTEND_URL` 与 `VITE_API_BASE_URL`）
 
 ---
 
@@ -159,47 +165,33 @@ FRONTEND_URL=*
 
 ### 生产环境
 
-#### 前端（Vercel）
+#### 前端（Cloudflare Pages）
 ```bash
-VITE_API_BASE_URL=https://your-backend.railway.app
+VITE_API_BASE_URL=https://nature-geo-vis-server-production.up.railway.app
 ```
 
-#### 后端（Railway/Render）
+#### 后端（Railway）
 ```bash
 PORT=（平台自动设置）
 NODE_ENV=production
-FRONTEND_URL=https://your-frontend.vercel.app
+FRONTEND_URL=https://nature-geo-vis.pages.dev
 ```
 
 ---
 
 ## 📝 下一步行动
 
-### 立即可执行
-1. ✅ **提交代码到 Git**
-   ```bash
-   git add .
-   git commit -m "feat: add deployment infrastructure"
-   git push origin main
-   ```
-
-2. ✅ **部署后端**（参考 `DEPLOYMENT.md` 第一步）
-   - 推荐使用 Railway（更易用）
-   - 记录分配的 URL
-
-3. ✅ **部署前端**（参考 `DEPLOYMENT.md` 第二步）
-   - 使用 Vercel
-   - 配置后端 URL
-
-4. ✅ **配置 CORS**（参考 `DEPLOYMENT.md` 第三步）
-   - 更新后端 `FRONTEND_URL`
-
-5. ✅ **验证部署**（使用 `DEPLOYMENT_CHECKLIST.md`）
+### 已完成
+1. ✅ **提交代码到 Git** — https://github.com/HITNature/nature-geo-vis
+2. ✅ **部署后端** — Railway：`nature-geo-vis-server-production.up.railway.app`
+3. ✅ **部署前端** — Cloudflare Pages：`nature-geo-vis.pages.dev`
+4. ✅ **配置 CORS** — `FRONTEND_URL=https://nature-geo-vis.pages.dev`
+5. ✅ **验证部署** — 使用 `DEPLOYMENT_CHECKLIST.md`
 
 ### 可选优化
 - [ ] 添加 CI/CD 自动化测试
 - [ ] 集成错误监控（Sentry）
-- [ ] 添加性能监控（Vercel Analytics）
+- [ ] 添加性能监控（Cloudflare Analytics）
 - [ ] 实现数据文件 CDN 加速
 - [ ] 添加 API 速率限制
 
@@ -218,20 +210,20 @@ FRONTEND_URL=https://your-frontend.vercel.app
 
 ## 📦 改造文件清单
 
-### 新增文件（10）
+### 新增文件
 ```
 .env.example                    # 环境变量模板
 .env.development                # 开发环境配置
 src/utils/api.js                # API 工具模块
-vercel.json                     # Vercel 配置
 railway.toml                    # Railway 配置
-render.yaml                     # Render 配置
+public/_redirects               # Cloudflare Pages SPA 回退
+render.yaml                     # Render 配置（备选）
 DEPLOYMENT.md                   # 部署指南
 DEPLOYMENT_CHECKLIST.md         # 部署检查清单
 INFRASTRUCTURE_SUMMARY.md       # 本文档（改造总结）
 ```
 
-### 修改文件（4）
+### 修改文件
 ```
 .gitignore                      # 更新忽略规则
 server/config.js                # 添加环境变量支持
@@ -272,10 +264,11 @@ README.md                       # 添加部署章节
          │ HTTPS
          ↓
 ┌─────────────────┐      ┌─────────────────┐
-│  Vercel CDN     │─────→│  Railway App    │
+│ Cloudflare Pages│─────→│  Railway App    │
 │  (前端静态资源)  │ API  │  (后端服务)      │
 └─────────────────┘      └─────────────────┘
-   全球边缘节点              动态 API 服务
+ nature-geo-vis.pages.dev   nature-geo-vis-server-
+                            production.up.railway.app
 ```
 
 ---
@@ -291,5 +284,6 @@ README.md                       # 添加部署章节
 ---
 
 **改造完成日期**: 2026-01-29  
-**改造状态**: ✅ 已完成，待部署验证  
-**下一步**: 参考 `DEPLOYMENT.md` 开始部署
+**文档更新日期**: 2026-07-26  
+**改造状态**: ✅ 已完成并部署  
+**生产入口**: https://nature-geo-vis.pages.dev
