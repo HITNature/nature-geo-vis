@@ -380,7 +380,7 @@ function MapView({
                     style={cityStyle}
                     onEachFeature={(feature, layer) => {
                         const props = feature.properties;
-                        const name = props.city || props.City_name_CN || props.name || '未知区域';
+                        const name = props.city || props.City_name_CN || props.name;
                         layer.on({
                             mouseover: (e) => {
                                 e.target.setStyle({ fillOpacity: 0.3, weight: 2 });
@@ -389,7 +389,9 @@ function MapView({
                                 e.target.setStyle(cityStyle(feature));
                             }
                         });
-                        layer.bindTooltip(name, { sticky: true, className: 'city-tooltip' });
+                        if (name && name !== '未知区域') {
+                            layer.bindTooltip(name, { sticky: true, className: 'city-tooltip' });
+                        }
                     }}
                 />
             )}

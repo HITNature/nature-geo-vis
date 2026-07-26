@@ -130,15 +130,19 @@ function updateCells() {
 function updateCities() {
     console.log('\n📦 更新城市 city_level → cities.geojson...');
     const rows = db.prepare(`SELECT * FROM city_level`).all();
-    const byId = new Map(rows.map((r) => [r.OBJECTID, r]));
+    const byName = new Map(rows.map((r) => [r.name, r]));
     const citiesPath = path.join(dataDir, 'cities.geojson');
     const geo = loadJson(citiesPath);
     let updated = 0;
+    let missing = 0;
 
     for (const f of geo.features) {
-        const id = f.properties?.OBJECTID ?? f.properties?.id;
-        const row = byId.get(id);
-        if (!row) continue;
+        const name = f.properties?.name || f.properties?.city;
+        const row = byName.get(name);
+        if (!row) {
+            missing++;
+            continue;
+        }
         const { Shape, ...attrs } = row;
         f.properties = {
             ...attrs,
@@ -151,19 +155,19 @@ function updateCities() {
     }
 
     writeJson(citiesPath, geo);
-    console.log(`  ✅ 城市属性更新 ${updated}/${rows.length}`);
+    console.log(`  ✅ 城市属性更新 ${updated}/${rows.length}，未匹配 ${missing}`);
 }
 
 /** JS_POI_level + 旧行政字段 → pois.geojson */
 function updateJsPois() {
     console.log('\n📦 更新初中 POI JS_POI_level → pois.geojson...');
     const oldPoisPath = path.join(dataDir, 'pois.geojson');
-    const oldById = new Map();
+    const oldByName = new Map();
     if (fs.existsSync(oldPoisPath)) {
         const old = loadJson(oldPoisPath);
         for (const f of old.features) {
-            const id = f.properties?.id ?? f.properties?.OBJECTID;
-            if (id != null) oldById.set(id, f.properties);
+            const name = f.properties?.name;
+            if (name != null) oldByName.set(name, f.properties);
         }
     }
 
@@ -176,7 +180,7 @@ function updateJsPois() {
     `).all();
 
     const features = rows.map((row) => {
-        const old = oldById.get(row.OBJECTID) || {};
+        const old = oldByName.get(row.name) || {};
         return {
             type: 'Feature',
             properties: {
