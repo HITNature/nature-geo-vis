@@ -42,6 +42,11 @@ function writeJson(filePath, data) {
 /** GCs_level → cells_chunks（按 OBJECTID 合并属性，保留几何） */
 function updateCells() {
     console.log('\n📦 更新网格 GCs_level → cells_chunks...');
+    
+    // 获取正确的城市-省份映射，用于修正网格数据中错误的省份字段
+    const cityRows = db.prepare(`SELECT name, province FROM city_level`).all();
+    const cityToProvince = new Map(cityRows.map((r) => [r.name, r.province]));
+
     const rows = db.prepare(`
         SELECT OBJECTID, city, country, province, City_name_EN, City_code, city_type, city_country,
                wpop_2010_corrected, wpop_2020_corrected, wpop_change, wpop_change_ratio,
@@ -76,12 +81,13 @@ function updateCells() {
                 continue;
             }
             // 保留几何，替换属性为新库字段（并提供前端兼容别名）
+            const correctProvince = cityToProvince.get(row.city) || row.province;
             f.properties = {
                 OBJECTID: row.OBJECTID,
                 id: row.OBJECTID,
                 city: row.city,
                 country: row.country,
-                province: row.province,
+                province: correctProvince,
                 City_name_EN: row.City_name_EN,
                 City_code: row.City_code,
                 city_type: row.city_type,
