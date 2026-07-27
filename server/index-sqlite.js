@@ -94,16 +94,40 @@ function prepareQueries() {
     `);
 
     // 聚合数据
-    queries.aggregatedProvince = db.prepare(`
+    queries.aggregatedProvinceJS = db.prepare(`
         SELECT name, key, count, lng, lat, level FROM pois_aggregated_province
     `);
 
-    queries.aggregatedCity = db.prepare(`
+    queries.aggregatedCityJS = db.prepare(`
         SELECT name, key, count, lng, lat, level FROM pois_aggregated_city
     `);
 
-    queries.aggregatedDistrict = db.prepare(`
+    queries.aggregatedDistrictJS = db.prepare(`
         SELECT name, key, count, lng, lat, level FROM pois_aggregated_district
+    `);
+
+    queries.aggregatedProvincePS = db.prepare(`
+        SELECT name, key, count, lng, lat, level FROM pois_aggregated_province_ps
+    `);
+
+    queries.aggregatedCityPS = db.prepare(`
+        SELECT name, key, count, lng, lat, level FROM pois_aggregated_city_ps
+    `);
+
+    queries.aggregatedDistrictPS = db.prepare(`
+        SELECT name, key, count, lng, lat, level FROM pois_aggregated_district_ps
+    `);
+
+    queries.aggregatedProvinceAll = db.prepare(`
+        SELECT name, key, count, lng, lat, level FROM pois_aggregated_province_all
+    `);
+
+    queries.aggregatedCityAll = db.prepare(`
+        SELECT name, key, count, lng, lat, level FROM pois_aggregated_city_all
+    `);
+
+    queries.aggregatedDistrictAll = db.prepare(`
+        SELECT name, key, count, lng, lat, level FROM pois_aggregated_district_all
     `);
 
     // 搜索地点和 POI
@@ -277,21 +301,52 @@ app.get('/api/cell/:id', (req, res) => {
 
 // API: 获取 POI 数据（按行政级别聚合）
 app.get('/api/pois/aggregated', (req, res) => {
-    const { level } = req.query;
+    const { level, type } = req.query;
+    const poiType = (type || 'all').toLowerCase(); // js | ps | all
 
     let rows;
-    switch (level) {
-        case 'province':
-            rows = queries.aggregatedProvince.all();
-            break;
-        case 'city':
-            rows = queries.aggregatedCity.all();
-            break;
-        case 'district':
-            rows = queries.aggregatedDistrict.all();
-            break;
-        default:
-            return res.status(400).json({ error: 'Invalid aggregation level' });
+    if (poiType === 'js') {
+        switch (level) {
+            case 'province':
+                rows = queries.aggregatedProvinceJS.all();
+                break;
+            case 'city':
+                rows = queries.aggregatedCityJS.all();
+                break;
+            case 'district':
+                rows = queries.aggregatedDistrictJS.all();
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid aggregation level' });
+        }
+    } else if (poiType === 'ps') {
+        switch (level) {
+            case 'province':
+                rows = queries.aggregatedProvincePS.all();
+                break;
+            case 'city':
+                rows = queries.aggregatedCityPS.all();
+                break;
+            case 'district':
+                rows = queries.aggregatedDistrictPS.all();
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid aggregation level' });
+        }
+    } else {
+        switch (level) {
+            case 'province':
+                rows = queries.aggregatedProvinceAll.all();
+                break;
+            case 'city':
+                rows = queries.aggregatedCityAll.all();
+                break;
+            case 'district':
+                rows = queries.aggregatedDistrictAll.all();
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid aggregation level' });
+        }
     }
 
     res.json(toAggregatedFeatureCollection(rows));
@@ -299,7 +354,7 @@ app.get('/api/pois/aggregated', (req, res) => {
 
 // API: 获取 POI 数据（按城市聚合） - 保持向下兼容
 app.get('/api/pois/city-clusters', (req, res) => {
-    const rows = queries.aggregatedCity.all();
+    const rows = queries.aggregatedCityAll.all();
     res.json(toAggregatedFeatureCollection(rows));
 });
 

@@ -400,6 +400,7 @@ function importPOIs() {
 function createAggregationViews() {
     console.log('\n📊 创建聚合视图...');
 
+    // === JS 聚合 ===
     // 省级聚合
     db.exec(`
         CREATE TABLE IF NOT EXISTS pois_aggregated_province AS
@@ -445,6 +446,98 @@ function createAggregationViews() {
         GROUP BY province, city, district
     `);
 
+    // === PS 聚合 ===
+    // 省级聚合
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS pois_aggregated_province_ps AS
+        SELECT 
+            COALESCE(province_EN, province) as name,
+            province as key,
+            COUNT(*) as count,
+            AVG(lng) as lng,
+            AVG(lat) as lat,
+            'province' as level
+        FROM pois
+        WHERE province IS NOT NULL AND poi_type = 'PS'
+        GROUP BY province
+    `);
+
+    // 市级聚合
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS pois_aggregated_city_ps AS
+        SELECT 
+            COALESCE(city_EN, city) as name,
+            province || ':' || city as key,
+            COUNT(*) as count,
+            AVG(lng) as lng,
+            AVG(lat) as lat,
+            'city' as level
+        FROM pois
+        WHERE city IS NOT NULL AND poi_type = 'PS'
+        GROUP BY province, city
+    `);
+
+    // 区县级聚合
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS pois_aggregated_district_ps AS
+        SELECT 
+            district as name,
+            province || ':' || city || ':' || district as key,
+            COUNT(*) as count,
+            AVG(lng) as lng,
+            AVG(lat) as lat,
+            'district' as level
+        FROM pois
+        WHERE district IS NOT NULL AND poi_type = 'PS'
+        GROUP BY province, city, district
+    `);
+
+    // === ALL 聚合 ===
+    // 省级聚合
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS pois_aggregated_province_all AS
+        SELECT 
+            COALESCE(province_EN, province) as name,
+            province as key,
+            COUNT(*) as count,
+            AVG(lng) as lng,
+            AVG(lat) as lat,
+            'province' as level
+        FROM pois
+        WHERE province IS NOT NULL
+        GROUP BY province
+    `);
+
+    // 市级聚合
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS pois_aggregated_city_all AS
+        SELECT 
+            COALESCE(city_EN, city) as name,
+            province || ':' || city as key,
+            COUNT(*) as count,
+            AVG(lng) as lng,
+            AVG(lat) as lat,
+            'city' as level
+        FROM pois
+        WHERE city IS NOT NULL
+        GROUP BY province, city
+    `);
+
+    // 区县级聚合
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS pois_aggregated_district_all AS
+        SELECT 
+            district as name,
+            province || ':' || city || ':' || district as key,
+            COUNT(*) as count,
+            AVG(lng) as lng,
+            AVG(lat) as lat,
+            'district' as level
+        FROM pois
+        WHERE district IS NOT NULL
+        GROUP BY province, city, district
+    `);
+
     const provinceCount = db.prepare('SELECT COUNT(*) as c FROM pois_aggregated_province').get().c;
     const cityCount = db.prepare('SELECT COUNT(*) as c FROM pois_aggregated_city').get().c;
     const districtCount = db.prepare('SELECT COUNT(*) as c FROM pois_aggregated_district').get().c;
@@ -462,7 +555,9 @@ function printStats() {
 
     const tables = [
         'boundaries', 'cities', 'cells', 'pois',
-        'pois_aggregated_province', 'pois_aggregated_city', 'pois_aggregated_district'
+        'pois_aggregated_province', 'pois_aggregated_city', 'pois_aggregated_district',
+        'pois_aggregated_province_ps', 'pois_aggregated_city_ps', 'pois_aggregated_district_ps',
+        'pois_aggregated_province_all', 'pois_aggregated_city_all', 'pois_aggregated_district_all'
     ];
 
     for (const table of tables) {

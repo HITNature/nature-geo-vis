@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMapEvents, ZoomControl, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { perf } from '../utils/perf';
@@ -225,11 +225,21 @@ function MapView({
 
     // 加载所有级别的聚合数据
     useEffect(() => {
+        let type = 'all';
+        if (showJsPOI && !showPsPOI) type = 'js';
+        else if (!showJsPOI && showPsPOI) type = 'ps';
+        else if (!showJsPOI && !showPsPOI) type = 'none';
+
+        if (type === 'none') {
+            setAggregatedData({ province: null, city: null, district: null });
+            return;
+        }
+
         setIsDataLoading(true);
         const endMeasure = perf.startMeasure('Load Aggr Data');
         const levels = ['province', 'city', 'district'];
         Promise.all(levels.map(level =>
-            apiFetch(`/api/pois/aggregated?level=${level}`).then(res => res.json())
+            apiFetch(`/api/pois/aggregated?level=${level}&type=${type}`).then(res => res.json())
         ))
             .then(([province, city, district]) => {
                 setAggregatedData({ province, city, district });
@@ -241,7 +251,7 @@ function MapView({
                 setIsDataLoading(false);
                 endMeasure();
             });
-    }, []);
+    }, [showJsPOI, showPsPOI]);
 
     // 视口变化时加载详细数据
     const handleMoveEnd = useCallback((bbox, zoom) => {
@@ -552,13 +562,13 @@ function MapView({
                             }
                         }}
                     >
-                        <Popup eventHandlers={{ remove: onPopupClose }}>
-                            <strong>{name}</strong>
-                            <br />
-                            Level: {level}
-                            <br />
-                            Schools: {count}
-                        </Popup>
+                        <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="city-tooltip">
+                            <div style={{ textAlign: 'left', lineHeight: '1.4' }}>
+                                <strong style={{ fontSize: '0.9rem', color: '#fff' }}>{name}</strong>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '2px' }}>Level: {level}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>Schools: {count}</div>
+                            </div>
+                        </Tooltip>
                     </Marker>
                 );
             })}

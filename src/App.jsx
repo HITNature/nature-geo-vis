@@ -88,8 +88,8 @@ function App() {
                 {/* Header / Status Bar */}
                 <header className="params-bar">
                     <div className="brand">
-                        <h1 className="brand__title">Nature Geo Vis</h1>
-                        <span className="brand__subtitle">Educational Resource Distribution</span>
+                        <h1 className="brand__title">China Basic Education Facilities Atlas at 1 km Resolution</h1>
+                        <span className="brand__subtitle">Mapping Changes in School Supply, Accessibility, and Compulsory School-Age Population</span>
                     </div>
 
                     <div className="status-indicators">
