@@ -54,7 +54,7 @@ function prepareQueries() {
 
     // Cities - 通过 R-Tree 空间查询
     queries.citiesByBBox = db.prepare(`
-        SELECT c.id, c.name, c.geometry, c.properties
+        SELECT c.id, c.name, c.city_EN, c.province_EN, c.geometry, c.properties
         FROM cities c
         INNER JOIN cities_rtree r ON c.id = r.id
         WHERE r.max_x >= ? AND r.min_x <= ?
@@ -62,12 +62,12 @@ function prepareQueries() {
     `);
 
     queries.allCities = db.prepare(`
-        SELECT id, name, geometry, properties FROM cities
+        SELECT id, name, city_EN, province_EN, geometry, properties FROM cities
     `);
 
     // Cells - 通过 R-Tree 空间查询
     queries.cellsByBBox = db.prepare(`
-        SELECT c.id, c.cell_id, c.city, c.country,
+        SELECT c.id, c.cell_id, c.city, c.city_EN, c.country, c.province_EN,
                c.wpop_change, c.pop_6_11_change, c.pop_12_14_change,
                c.ed_ps_change, c.ed_js_change,
                c.PS_2010_count, c.PS_2020_count, c.JS_2010_count, c.JS_2020_count,
@@ -84,7 +84,7 @@ function prepareQueries() {
 
     // POIs - 通过 R-Tree 空间查询
     queries.poisByBBox = db.prepare(`
-        SELECT p.id, p.name, p.poi_type, p.province, p.city, p.district,
+        SELECT p.id, p.name, p.poi_type, p.province, p.province_EN, p.city, p.city_EN, p.district,
                p.lng, p.lat, p.survive_pop_change, p.properties
         FROM pois p
         INNER JOIN pois_rtree r ON p.id = r.id
@@ -237,7 +237,9 @@ app.get('/api/cells', (req, res) => {
                 ...props,
                 id: row.cell_id ?? props.id,
                 city: row.city ?? props.city,
+                city_EN: row.city_EN ?? props.city_EN,
                 country: row.country ?? props.country,
+                province_EN: row.province_EN ?? props.province_EN,
                 wpop_change: row.wpop_change ?? props.wpop_change,
                 pop_6_11_change: row.pop_6_11_change ?? props.pop_6_11_change,
                 pop_12_14_change: row.pop_12_14_change ?? props.pop_12_14_change,

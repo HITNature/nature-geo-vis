@@ -27,7 +27,7 @@ pnpm-debug.log*
 .claude
 *.tmp
 *.temp
-toXY0723
+temp
 
 # 数据库文件
 geodatabase.db

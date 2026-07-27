@@ -64,11 +64,11 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
             <div className="detail-view__header">
                 <div>
                     <h2 className="detail-view__title">
-                        {properties.name || properties.city || 'Unknown Location'}
+                        {properties.city_EN || properties.city || properties.name || 'Unknown Location'}
                     </h2>
                     <div className="detail-view__subtitle">
                         {isPOI ? 'POI Data Point' : 'Grid Cell Analysis'}
-                        {properties.province && ` • ${properties.province}`}
+                        {properties.province_EN && ` • ${properties.province_EN}`}
                     </div>
                 </div>
                 <button
@@ -121,48 +121,46 @@ function DetailPanel({ feature, displayFields, poiDisplayFields, onClose }) {
                     ) : (
                         // Grid Fields
                         displayFields && displayFields.map((field) => {
-                            let value = properties[field.key];
-                            let displayValue = value;
-                            let statusClass = '';
+                            return field.metrics?.map((metric) => {
+                                let value = properties[metric.key];
+                                let displayValue = value;
+                                let statusClass = '';
 
-                            // Special formatting for School count change ranges
-                            if (field.key === 'PS_count_change') {
-                                displayValue = `${properties.PS_2010_count || 0} → ${properties.PS_2020_count || 0}`;
-                                const diff = (properties.PS_2020_count || 0) - (properties.PS_2010_count || 0);
-                                if (diff > 0) statusClass = 'positive';
-                                else if (diff < 0) statusClass = 'negative';
-                            } else if (field.key === 'JS_count_change') {
-                                displayValue = `${properties.JS_2010_count || 0} → ${properties.JS_2020_count || 0}`;
-                                const diff = (properties.JS_2020_count || 0) - (properties.JS_2010_count || 0);
-                                if (diff > 0) statusClass = 'positive';
-                                else if (diff < 0) statusClass = 'negative';
-                            } else {
-                                if (value === null || value === undefined) return null;
-                                if (typeof value === 'number') {
-                                    if (field.format === 'percent' || String(field.key).includes('ratio') || String(field.key).includes('changeR')) {
-                                        // 库内可能是 0~1 小数或已是百分数
-                                        const pct = Math.abs(value) <= 1 ? value * 100 : value;
-                                        displayValue = `${pct.toFixed(2)}%`;
-                                    } else if (field.format === 'int') {
-                                        displayValue = Math.round(value).toLocaleString();
-                                    } else {
-                                        displayValue = value.toFixed(2);
-                                    }
-                                    if (value > 0) statusClass = 'positive';
-                                    else if (value < 0) statusClass = 'negative';
+                                if (metric.format === 'facility_change') {
+                                    const prefix = metric.key.startsWith('PS') ? 'PS' : 'JS';
+                                    const val2010 = properties[`${prefix}_2010_count`] || 0;
+                                    const val2020 = properties[`${prefix}_2020_count`] || 0;
+                                    displayValue = `${val2010} → ${val2020}`;
+                                    const diff = val2020 - val2010;
+                                    if (diff > 0) statusClass = 'positive';
+                                    else if (diff < 0) statusClass = 'negative';
                                 } else {
-                                    displayValue = value;
+                                    if (value === null || value === undefined) return null;
+                                    if (typeof value === 'number') {
+                                        if (metric.format === 'percent' || String(metric.key).includes('ratio') || String(metric.key).includes('changeR') || String(metric.key).endsWith('_R')) {
+                                            const pct = Math.abs(value) <= 1 ? value * 100 : value;
+                                            displayValue = `${pct.toFixed(2)}%`;
+                                        } else if (metric.format === 'int') {
+                                            displayValue = Math.round(value).toLocaleString();
+                                        } else {
+                                            displayValue = value.toFixed(2);
+                                        }
+                                        if (value > 0) statusClass = 'positive';
+                                        else if (value < 0) statusClass = 'negative';
+                                    } else {
+                                        displayValue = value;
+                                    }
                                 }
-                            }
 
-                            return (
-                                <div key={field.key} className="data-row">
-                                    <span className="data-label">{field.label}</span>
-                                    <span className={`data-value ${statusClass}`}>
-                                        {displayValue}
-                                    </span>
-                                </div>
-                            );
+                                return (
+                                    <div key={metric.key} className="data-row">
+                                        <span className="data-label">{metric.label}</span>
+                                        <span className={`data-value ${statusClass}`}>
+                                            {displayValue}
+                                        </span>
+                                    </div>
+                                );
+                            });
                         })
                     )}
                 </div>

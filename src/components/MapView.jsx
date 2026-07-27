@@ -47,16 +47,56 @@ const cityStyle = (feature) => ({
     opacity: 0.6
 });
 
-// 网格样式
-const cellStyle = (feature) => {
-    // 根据人口变化显示不同颜色
-    const change = feature.properties?.wpop_change || 0;
-    let fillColor = '#888888';
-    if (change > 500) fillColor = '#ef4444';      // 红色，大幅增长
-    else if (change > 0) fillColor = '#f87171';   // 浅红，小幅增长
-    else if (change > -500) fillColor = '#a3e635'; // 浅绿，小幅减少
-    else fillColor = '#22c55e';                    // 绿色，大幅减少
+// 网格着色核心分类方法（根据 selectedGridLayer 动态应用表1分类标准）
+const getCellFillColor = (feature, selectedGridLayer) => {
+    const props = feature.properties || {};
+    
+    if (selectedGridLayer === 'wpop_change') {
+        const val = props.wpop_change ?? 0;
+        if (val > 5000) return '#ef4444'; // Strong Growth
+        if (val > 0) return '#f87171';    // Moderate Growth
+        if (val > -5000) return '#a3e635'; // Slight Decline
+        return '#22c55e';                 // Significant Decline
+    }
+    
+    if (selectedGridLayer === 'pop_6_11_change') {
+        const val = props.pop_6_11_change ?? props['pop6-11_change'] ?? 0;
+        if (val > 500) return '#ef4444';
+        if (val > 0) return '#f87171';
+        if (val > -500) return '#a3e635';
+        return '#22c55e';
+    }
+    
+    if (selectedGridLayer === 'pop_12_14_change') {
+        const val = props.pop_12_14_change ?? props['pop12-14_change'] ?? 0;
+        if (val > 500) return '#ef4444';
+        if (val > 0) return '#f87171';
+        if (val > -500) return '#a3e635';
+        return '#22c55e';
+    }
+    
+    if (selectedGridLayer === 'ed_ps_change') {
+        const val = props.ed_ps_change ?? props.ED_PS_change ?? 0;
+        if (val > 1000) return '#ef4444';
+        if (val > 0) return '#f87171';
+        if (val > -1000) return '#a3e635';
+        return '#22c55e';
+    }
+    
+    if (selectedGridLayer === 'ed_js_change') {
+        const val = props.ed_js_change ?? props.ED_JS_change ?? 0;
+        if (val > 1000) return '#ef4444';
+        if (val > 0) return '#f87171';
+        if (val > -1000) return '#a3e635';
+        return '#22c55e';
+    }
+    
+    return '#888888';
+};
 
+// 网格样式
+const cellStyle = (feature, selectedGridLayer = 'wpop_change') => {
+    const fillColor = getCellFillColor(feature, selectedGridLayer);
     return {
         color: '#aaaaaa',
         weight: 0.5,
@@ -132,6 +172,7 @@ function MapView({
     onZoomChange,
     onLoadingChange,
     showGrid = true,
+    selectedGridLayer = 'wpop_change',
     showJsPOI = true,
     showPsPOI = true,
     showPOI = true, // 兼容旧 prop：任一为 true 即显示
@@ -380,7 +421,7 @@ function MapView({
                     style={cityStyle}
                     onEachFeature={(feature, layer) => {
                         const props = feature.properties;
-                        const name = props.city || props.City_name_CN || props.name;
+                        const name = props.city_EN || props.city || props.City_name_CN || props.name;
                         layer.on({
                             mouseover: (e) => {
                                 e.target.setStyle({ fillOpacity: 0.3, weight: 2 });
@@ -408,17 +449,16 @@ function MapView({
             {/* 动态图层：网格数据 */}
             {showGrid && cells && cells.features && cells.features.length > 0 && (
                 <GeoJSON
-                    key={`cells-${currentZoom}-${cells.features.length}`}
+                    key={`cells-${currentZoom}-${selectedGridLayer}-${cells.features.length}`}
                     data={cells}
-                    style={cellStyle}
+                    style={(f) => cellStyle(f, selectedGridLayer)}
                     onEachFeature={(feature, layer) => {
-                        const props = feature.properties;
                         layer.on({
                             mouseover: (e) => {
                                 e.target.setStyle({ fillOpacity: 0.6, weight: 1 });
                             },
                             mouseout: (e) => {
-                                e.target.setStyle(cellStyle(feature));
+                                e.target.setStyle(cellStyle(feature, selectedGridLayer));
                             },
                             click: () => {
                                 setSelectedCell(feature);
@@ -440,50 +480,53 @@ function MapView({
                     }}
                 >
                     <div className="cell-popup">
-                        <h4>{selectedCell.properties.city || '网格'} - {selectedCell.properties.province || ''}</h4>
+                        <h4>{selectedCell.properties.city_EN || selectedCell.properties.city || 'Grid'} {selectedCell.properties.province_EN ? `, ${selectedCell.properties.province_EN}` : ''}</h4>
                         <div className="cell-stats">
-                            {config?.displayFields?.map((field) => {
-                                let value = selectedCell.properties[field.key];
-                                let displayValue = value;
-                                let statusClass = '';
+                            {(() => {
+                                // 找到当前激活图层配置
+                                const activeField = config?.displayFields?.find(f => f.key === selectedGridLayer);
+                                if (!activeField) return null;
 
-                                // Special formatting for School count change ranges (PS/JS)
-                                if (field.key === 'PS_count_change') {
-                                    displayValue = `${selectedCell.properties.PS_2010_count || 0} → ${selectedCell.properties.PS_2020_count || 0}`;
-                                    const diff = (selectedCell.properties.PS_2020_count || 0) - (selectedCell.properties.PS_2010_count || 0);
-                                    if (diff > 0) statusClass = 'positive';
-                                    else if (diff < 0) statusClass = 'negative';
-                                } else if (field.key === 'JS_count_change') {
-                                    displayValue = `${selectedCell.properties.JS_2010_count || 0} → ${selectedCell.properties.JS_2020_count || 0}`;
-                                    const diff = (selectedCell.properties.JS_2020_count || 0) - (selectedCell.properties.JS_2010_count || 0);
-                                    if (diff > 0) statusClass = 'positive';
-                                    else if (diff < 0) statusClass = 'negative';
-                                } else {
-                                    // Default numeric logic
-                                    if (value === null || value === undefined || value === '') return null;
-                                    if (typeof value === 'number') {
-                                        if (field.format === 'percent' || String(field.key).includes('ratio') || String(field.key).includes('changeR')) {
-                                            const pct = Math.abs(value) <= 1 ? value * 100 : value;
-                                            displayValue = `${pct.toFixed(2)}%`;
-                                        } else if (field.format === 'int') {
-                                            displayValue = Math.round(value).toLocaleString();
-                                        } else {
-                                            displayValue = value.toFixed(2);
-                                        }
-                                        if (value > 0) statusClass = 'positive';
-                                        else if (value < 0) statusClass = 'negative';
+                                return activeField.metrics?.map((metric) => {
+                                    let value = selectedCell.properties[metric.key];
+                                    let displayValue = value;
+                                    let statusClass = '';
+
+                                    if (metric.format === 'facility_change') {
+                                        // 表达形式为 0→1（即跟现在表现形式一致）
+                                        const prefix = metric.key.startsWith('PS') ? 'PS' : 'JS';
+                                        const val2010 = selectedCell.properties[`${prefix}_2010_count`] || 0;
+                                        const val2020 = selectedCell.properties[`${prefix}_2020_count`] || 0;
+                                        displayValue = `${val2010} → ${val2020}`;
+                                        const diff = val2020 - val2010;
+                                        if (diff > 0) statusClass = 'positive';
+                                        else if (diff < 0) statusClass = 'negative';
                                     } else {
-                                        displayValue = value;
+                                        if (value === null || value === undefined || value === '') return null;
+                                        if (typeof value === 'number') {
+                                            if (metric.format === 'percent' || String(metric.key).includes('ratio') || String(metric.key).includes('changeR') || String(metric.key).endsWith('_R')) {
+                                                const pct = Math.abs(value) <= 1 ? value * 100 : value;
+                                                displayValue = `${pct.toFixed(2)}%`;
+                                            } else if (metric.format === 'int') {
+                                                displayValue = Math.round(value).toLocaleString();
+                                            } else {
+                                                displayValue = value.toFixed(2);
+                                            }
+                                            if (value > 0) statusClass = 'positive';
+                                            else if (value < 0) statusClass = 'negative';
+                                        } else {
+                                            displayValue = value;
+                                        }
                                     }
-                                }
 
-                                return (
-                                    <div key={field.key} className="stat-row">
-                                        <span>{field.label}:</span>
-                                        <span className={statusClass}>{displayValue}</span>
-                                    </div>
-                                );
-                            })}
+                                    return (
+                                        <div key={metric.key} className="stat-row">
+                                            <span>{metric.label}:</span>
+                                            <span className={statusClass}>{displayValue}</span>
+                                        </div>
+                                    );
+                                });
+                            })()}
                         </div>
                     </div>
                 </Popup>

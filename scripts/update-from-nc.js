@@ -30,6 +30,29 @@ if (!fs.existsSync(ncPath)) {
 
 const db = new Database(ncPath, { readonly: true });
 
+// 加载最新的英文省市名称映射
+const feedbackDbPath = path.join(rootDir, 'temp_0727意见反馈', 'latest.geodatabase');
+const cityToEn = new Map();
+const provinceToEn = new Map();
+
+if (fs.existsSync(feedbackDbPath)) {
+    const feedbackDb = new Database(feedbackDbPath, { readonly: true });
+    try {
+        const rows = feedbackDb.prepare(`SELECT name, province, city_EN, Province_EN FROM city_level0727`).all();
+        for (const r of rows) {
+            cityToEn.set(r.name, { city_EN: r.city_EN, Province_EN: r.Province_EN });
+            provinceToEn.set(r.province, r.Province_EN);
+        }
+        console.log(`  成功从 latest.geodatabase 加载了 ${cityToEn.size} 个省市英文名称映射`);
+    } catch (err) {
+        console.error('读取 city_level0727 失败:', err);
+    } finally {
+        feedbackDb.close();
+    }
+} else {
+    console.warn('⚠️ 警告: 找不到反馈数据库:', feedbackDbPath);
+}
+
 function loadJson(filePath) {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 }
@@ -82,12 +105,16 @@ function updateCells() {
             }
             // 保留几何，替换属性为新库字段（并提供前端兼容别名）
             const correctProvince = cityToProvince.get(row.city) || row.province;
+            const cityEnInfo = cityToEn.get(row.city) || {};
+            const provEnInfo = provinceToEn.get(correctProvince) || cityEnInfo.Province_EN || '';
             f.properties = {
                 OBJECTID: row.OBJECTID,
                 id: row.OBJECTID,
                 city: row.city,
+                city_EN: cityEnInfo.city_EN || row.City_name_EN || '',
                 country: row.country,
                 province: correctProvince,
+                province_EN: provEnInfo || '',
                 City_name_EN: row.City_name_EN,
                 City_code: row.City_code,
                 city_type: row.city_type,
@@ -157,12 +184,16 @@ function updateCities() {
             continue;
         }
         const { Shape, ...attrs } = row;
+        const cityEnInfo = cityToEn.get(name) || {};
+        const provEnInfo = provinceToEn.get(row.province) || cityEnInfo.Province_EN || '';
         f.properties = {
             ...attrs,
             id: row.OBJECTID,
             OBJECTID: row.OBJECTID,
             // 兼容旧 name / city 读取
             city: row.name,
+            city_EN: cityEnInfo.city_EN || row.City_name_EN || '',
+            province_EN: provEnInfo || '',
         };
         updated++;
     }
@@ -200,6 +231,8 @@ function updateJsPois() {
 
     const features = rows.map((row) => {
         const old = oldByName.get(row.name) || {};
+        const cityEnInfo = cityToEn.get(old.city) || {};
+        const provEnInfo = provinceToEn.get(old.province) || cityEnInfo.Province_EN || '';
         return {
             type: 'Feature',
             properties: {
@@ -208,8 +241,10 @@ function updateJsPois() {
                 dtype: row.dtype,
                 poi_type: 'JS',
                 province: old.province ?? null,
+                province_EN: provEnInfo || null,
                 province_code: old.province_code ?? null,
                 city: old.city ?? null,
+                city_EN: cityEnInfo.city_EN || null,
                 city_code: old.city_code ?? null,
                 district: old.district ?? null,
                 district_code: old.district_code ?? null,
@@ -241,27 +276,33 @@ function updatePsPois() {
         WHERE wgs84lon IS NOT NULL AND wgs84lat IS NOT NULL
     `).all();
 
-    const features = rows.map((row) => ({
-        type: 'Feature',
-        properties: {
-            id: row.OBJECTID,
-            name: row.name,
-            dtype: row.dtype,
-            poi_type: 'PS',
-            province: row.pname,
-            city: row.cityname,
-            district: row.adname,
-            city_type: row.city_type,
-            survive_2010_pop: row.ba_PS_survice_pop_2010,
-            survive_2020_pop: row.ba_PS_survice_pop_2020,
-            survive_pop_change: row.survice_pop_change,
-            survive_pop_change_R: row.survice_pop_change_R,
-        },
-        geometry: {
-            type: 'Point',
-            coordinates: [row.wgs84lon, row.wgs84lat],
-        },
-    }));
+    const features = rows.map((row) => {
+        const cityEnInfo = cityToEn.get(row.cityname) || {};
+        const provEnInfo = provinceToEn.get(row.pname) || cityEnInfo.Province_EN || '';
+        return {
+            type: 'Feature',
+            properties: {
+                id: row.OBJECTID,
+                name: row.name,
+                dtype: row.dtype,
+                poi_type: 'PS',
+                province: row.pname,
+                province_EN: provEnInfo || null,
+                city: row.cityname,
+                city_EN: cityEnInfo.city_EN || null,
+                district: row.adname,
+                city_type: row.city_type,
+                survive_2010_pop: row.ba_PS_survice_pop_2010,
+                survive_2020_pop: row.ba_PS_survice_pop_2020,
+                survive_pop_change: row.survice_pop_change,
+                survive_pop_change_R: row.survice_pop_change_R,
+            },
+            geometry: {
+                type: 'Point',
+                coordinates: [row.wgs84lon, row.wgs84lat],
+            },
+        };
+    });
 
     writeJson(path.join(dataDir, 'pois_ps.geojson'), { type: 'FeatureCollection', features });
     console.log(`  ✅ 小学 POI ${features.length}`);

@@ -135,6 +135,8 @@ function importCities() {
         CREATE TABLE IF NOT EXISTS cities (
             id INTEGER PRIMARY KEY,
             name TEXT,
+            city_EN TEXT,
+            province_EN TEXT,
             min_x REAL,
             min_y REAL,
             max_x REAL,
@@ -156,8 +158,8 @@ function importCities() {
     const data = loadGeoJSON('cities');
 
     const insertCity = db.prepare(`
-        INSERT INTO cities (name, min_x, min_y, max_x, max_y, geometry, properties)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO cities (name, city_EN, province_EN, min_x, min_y, max_x, max_y, geometry, properties)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertRTree = db.prepare(`
@@ -168,13 +170,16 @@ function importCities() {
     const insertMany = db.transaction((features) => {
         for (const f of features) {
             const bbox = getBBox(f.geometry);
-            const name = f.properties?.city || f.properties?.City_name_CN || f.properties?.name || '';
+            const props = f.properties || {};
+            const name = props.city || props.City_name_CN || props.name || '';
 
             const result = insertCity.run(
                 name,
+                props.city_EN || null,
+                props.province_EN || null,
                 bbox.minX, bbox.minY, bbox.maxX, bbox.maxY,
                 JSON.stringify(f.geometry),
-                JSON.stringify(f.properties || {})
+                JSON.stringify(props)
             );
 
             insertRTree.run(
@@ -200,7 +205,9 @@ function importCells() {
             id INTEGER PRIMARY KEY,
             cell_id INTEGER,
             city TEXT,
+            city_EN TEXT,
             country TEXT,
+            province_EN TEXT,
             min_x REAL,
             min_y REAL,
             max_x REAL,
@@ -232,13 +239,13 @@ function importCells() {
 
     const insertCell = db.prepare(`
         INSERT INTO cells (
-            cell_id, city, country,
+            cell_id, city, city_EN, country, province_EN,
             min_x, min_y, max_x, max_y,
             wpop_change, pop_6_11_change, pop_12_14_change,
             ed_ps_change, ed_js_change,
             PS_2010_count, PS_2020_count, JS_2010_count, JS_2020_count,
             geometry, properties
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertRTree = db.prepare(`
@@ -258,7 +265,9 @@ function importCells() {
             const result = insertCell.run(
                 props.id || null,
                 props.city || null,
+                props.city_EN || null,
                 props.country || null,
+                props.province_EN || null,
                 bbox.minX, bbox.minY, bbox.maxX, bbox.maxY,
                 props.wpop_change || null,
                 props.pop_6_11_change || props['pop6-11_change'] || null,
@@ -305,7 +314,9 @@ function importPOIs() {
             name TEXT,
             poi_type TEXT,
             province TEXT,
+            province_EN TEXT,
             city TEXT,
+            city_EN TEXT,
             district TEXT,
             lng REAL,
             lat REAL,
@@ -331,8 +342,8 @@ function importPOIs() {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_pois_type ON pois(poi_type)`);
 
     const insertPOI = db.prepare(`
-        INSERT INTO pois (name, poi_type, province, city, district, lng, lat, survive_pop_change, geometry, properties)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO pois (name, poi_type, province, province_EN, city, city_EN, district, lng, lat, survive_pop_change, geometry, properties)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertRTree = db.prepare(`
@@ -349,7 +360,9 @@ function importPOIs() {
                 props.name || null,
                 props.poi_type || 'JS',
                 props.province || null,
+                props.province_EN || null,
                 props.city || null,
+                props.city_EN || null,
                 props.district || null,
                 coords[0],
                 coords[1],
@@ -391,7 +404,7 @@ function createAggregationViews() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS pois_aggregated_province AS
         SELECT 
-            province as name,
+            COALESCE(province_EN, province) as name,
             province as key,
             COUNT(*) as count,
             AVG(lng) as lng,
@@ -406,7 +419,7 @@ function createAggregationViews() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS pois_aggregated_city AS
         SELECT 
-            city as name,
+            COALESCE(city_EN, city) as name,
             province || ':' || city as key,
             COUNT(*) as count,
             AVG(lng) as lng,

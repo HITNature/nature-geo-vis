@@ -11,6 +11,7 @@ function App() {
     const [zoom, setZoom] = useState(5);
     const [useOffscreen, setUseOffscreen] = useState(false);
     const [showGrid, setShowGrid] = useState(true);
+    const [selectedGridLayer, setSelectedGridLayer] = useState('wpop_change'); // 默认选中人口变化图层
     const [showJsPOI, setShowJsPOI] = useState(true);
     const [showPsPOI, setShowPsPOI] = useState(true);
 
@@ -44,9 +45,12 @@ function App() {
         setZoom(newZoom);
     };
 
-    const handleLayerToggle = (layerType, visible) => {
+    const handleLayerToggle = (layerType, visible, extra) => {
         if (layerType === 'grid') {
             setShowGrid(visible);
+            if (extra) {
+                setSelectedGridLayer(extra);
+            }
         } else if (layerType === 'poi-js') {
             setShowJsPOI(visible);
         } else if (layerType === 'poi-ps') {
@@ -71,6 +75,7 @@ function App() {
                     onZoomChange={handleZoomChange}
                     onLoadingChange={setIsLoading}
                     showGrid={showGrid}
+                    selectedGridLayer={selectedGridLayer}
                     showJsPOI={showJsPOI}
                     showPsPOI={showPsPOI}
                     onMapInstance={setMap}
@@ -106,7 +111,7 @@ function App() {
                 )}
 
                 {/* Bottom Left: Legend */}
-                <Legend onLayerToggle={handleLayerToggle} map={map} />
+                <Legend onLayerToggle={handleLayerToggle} map={map} selectedGridLayer={selectedGridLayer} />
 
                 {/* Status Bar / Hint (Floating) */}
                 <div style={{
