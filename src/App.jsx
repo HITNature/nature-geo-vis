@@ -119,7 +119,7 @@ function App() {
                     bottom: '32px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: 'rgba(11, 17, 33, 0.85)',
+                    background: 'rgba(11, 17, 33, 0.6)',
                     padding: '8px 20px',
                     borderRadius: '999px',
                     fontSize: '0.8rem',
@@ -143,6 +143,26 @@ function App() {
                             <span>{zoom < (config?.zoomConfig.showCells || 8) ? 'Zoom in for grid-level indicators' : 'Explore detail grids on the map'}</span>
                         </>
                     )}
+                </div>
+
+                {/* Map approval number — fixed below status bar */}
+                <div
+                    className="map-approval-number"
+                    style={{
+                        position: 'absolute',
+                        bottom: '12px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        fontSize: '0.7rem',
+                        color: 'rgba(248, 250, 252, 0.55)',
+                        letterSpacing: '0.02em',
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        zIndex: 1000,
+                        textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                    }}
+                >
+                    The map approval number for the China map is GS (20240650)
                 </div>
             </div>
         </div>

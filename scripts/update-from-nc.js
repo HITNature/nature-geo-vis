@@ -30,10 +30,11 @@ if (!fs.existsSync(ncPath)) {
 
 const db = new Database(ncPath, { readonly: true });
 
-// 加载最新的英文省市名称映射
+// 加载省市英文名称映射（city_level0727）；若反馈库缺失则回退到已有 cities.geojson
 const feedbackDbPath = path.join(rootDir, 'temp_0727意见反馈', 'latest.geodatabase');
 const cityToEn = new Map();
 const provinceToEn = new Map();
+const districtToEn = new Map();
 
 if (fs.existsSync(feedbackDbPath)) {
     const feedbackDb = new Database(feedbackDbPath, { readonly: true });
@@ -51,6 +52,40 @@ if (fs.existsSync(feedbackDbPath)) {
     }
 } else {
     console.warn('⚠️ 警告: 找不到反馈数据库:', feedbackDbPath);
+    const citiesPath = path.join(dataDir, 'cities.geojson');
+    if (fs.existsSync(citiesPath)) {
+        const cities = JSON.parse(fs.readFileSync(citiesPath, 'utf-8'));
+        for (const f of cities.features || []) {
+            const p = f.properties || {};
+            const name = p.name || p.city;
+            if (name && p.city_EN) {
+                cityToEn.set(name, { city_EN: p.city_EN, Province_EN: p.province_EN || '' });
+            }
+            if (p.province && p.province_EN) {
+                provinceToEn.set(p.province, p.province_EN);
+            }
+        }
+        console.log(`  回退：从 cities.geojson 加载了 ${cityToEn.size} 个省市英文名称映射`);
+    }
+}
+
+// 区县英文名：来自客户交付的 china_country_EN.name_EN
+const districtEnDbPath = path.join(rootDir, 'temp', 'NCtoXY0728.geodatabase');
+if (fs.existsSync(districtEnDbPath)) {
+    const districtDb = new Database(districtEnDbPath, { readonly: true });
+    try {
+        const rows = districtDb.prepare(`SELECT name, name_EN FROM china_country_EN WHERE name_EN IS NOT NULL AND name_EN != ''`).all();
+        for (const r of rows) {
+            districtToEn.set(r.name, r.name_EN);
+        }
+        console.log(`  成功从 NCtoXY0728.geodatabase 加载了 ${districtToEn.size} 个区县英文名称映射`);
+    } catch (err) {
+        console.error('读取 china_country_EN 失败:', err);
+    } finally {
+        districtDb.close();
+    }
+} else {
+    console.warn('⚠️ 警告: 找不到区县英文库:', districtEnDbPath);
 }
 
 function loadJson(filePath) {
@@ -247,6 +282,7 @@ function updateJsPois() {
                 city_EN: cityEnInfo.city_EN || null,
                 city_code: old.city_code ?? null,
                 district: old.district ?? null,
+                district_EN: (old.district && districtToEn.get(old.district)) || old.district_EN || null,
                 district_code: old.district_code ?? null,
                 survive_2010_pop: row.JS_ave_survice_pop_2010,
                 survive_2020_pop: row.JS_ave_survice_pop_2020,
@@ -291,6 +327,7 @@ function updatePsPois() {
                 city: row.cityname,
                 city_EN: cityEnInfo.city_EN || null,
                 district: row.adname,
+                district_EN: (row.adname && districtToEn.get(row.adname)) || null,
                 city_type: row.city_type,
                 survive_2010_pop: row.ba_PS_survice_pop_2010,
                 survive_2020_pop: row.ba_PS_survice_pop_2020,

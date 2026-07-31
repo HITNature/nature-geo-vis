@@ -318,6 +318,7 @@ function importPOIs() {
             city TEXT,
             city_EN TEXT,
             district TEXT,
+            district_EN TEXT,
             lng REAL,
             lat REAL,
             survive_pop_change REAL,
@@ -342,8 +343,8 @@ function importPOIs() {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_pois_type ON pois(poi_type)`);
 
     const insertPOI = db.prepare(`
-        INSERT INTO pois (name, poi_type, province, province_EN, city, city_EN, district, lng, lat, survive_pop_change, geometry, properties)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO pois (name, poi_type, province, province_EN, city, city_EN, district, district_EN, lng, lat, survive_pop_change, geometry, properties)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertRTree = db.prepare(`
@@ -364,6 +365,7 @@ function importPOIs() {
                 props.city || null,
                 props.city_EN || null,
                 props.district || null,
+                props.district_EN || null,
                 coords[0],
                 coords[1],
                 props.survive_pop_change ?? null,
@@ -435,7 +437,7 @@ function createAggregationViews() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS pois_aggregated_district AS
         SELECT 
-            district as name,
+            COALESCE(district_EN, district) as name,
             province || ':' || city || ':' || district as key,
             COUNT(*) as count,
             AVG(lng) as lng,
@@ -481,7 +483,7 @@ function createAggregationViews() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS pois_aggregated_district_ps AS
         SELECT 
-            district as name,
+            COALESCE(district_EN, district) as name,
             province || ':' || city || ':' || district as key,
             COUNT(*) as count,
             AVG(lng) as lng,
@@ -527,7 +529,7 @@ function createAggregationViews() {
     db.exec(`
         CREATE TABLE IF NOT EXISTS pois_aggregated_district_all AS
         SELECT 
-            district as name,
+            COALESCE(district_EN, district) as name,
             province || ':' || city || ':' || district as key,
             COUNT(*) as count,
             AVG(lng) as lng,
