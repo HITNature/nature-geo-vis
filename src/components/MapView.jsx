@@ -171,6 +171,8 @@ function MapView({
     onPopupClose,
     onZoomChange,
     onLoadingChange,
+    onConnectionError,
+    onConnectionRecovered,
     showGrid = true,
     selectedGridLayer = 'wpop_change',
     showJsPOI = true,
@@ -198,30 +200,43 @@ function MapView({
         onLoadingChange(isDataLoading || isMapLoading);
     }, [isDataLoading, isMapLoading, onLoadingChange]);
 
+    const reportFetchError = useCallback((context, err) => {
+        console.error(`Failed to load ${context}:`, err);
+        onConnectionError?.(
+            `Failed to load ${context}. Unable to reach the data service — please check the backend / database connection.`
+        );
+    }, [onConnectionError]);
+
     // 加载静态图层数据（国境线和行政区划）
     useEffect(() => {
         // 加载国境线
         apiFetch('/api/boundaries')
-            .then(res => res.json())
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
             .then(data => {
                 if (data.features && data.features.length > 0) {
                     setBoundaries(data);
                     console.log(`Loaded ${data.features.length} boundary lines`);
                 }
             })
-            .catch(err => console.error('Failed to load boundaries:', err));
+            .catch(err => reportFetchError('boundaries', err));
 
         // 加载行政区划
         apiFetch('/api/cities')
-            .then(res => res.json())
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
             .then(data => {
                 if (data.features && data.features.length > 0) {
                     setCities(data);
                     console.log(`Loaded ${data.features.length} city areas`);
                 }
             })
-            .catch(err => console.error('Failed to load cities:', err));
-    }, []);
+            .catch(err => reportFetchError('cities', err));
+    }, [reportFetchError]);
 
     // 加载所有级别的聚合数据
     useEffect(() => {
@@ -239,19 +254,23 @@ function MapView({
         const endMeasure = perf.startMeasure('Load Aggr Data');
         const levels = ['province', 'city', 'district'];
         Promise.all(levels.map(level =>
-            apiFetch(`/api/pois/aggregated?level=${level}&type=${type}`).then(res => res.json())
+            apiFetch(`/api/pois/aggregated?level=${level}&type=${type}`).then(async (res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
         ))
             .then(([province, city, district]) => {
                 setAggregatedData({ province, city, district });
                 setIsDataLoading(false);
                 endMeasure();
+                onConnectionRecovered?.();
             })
             .catch(err => {
-                console.error('Failed to load aggregated POIs:', err);
+                reportFetchError('school clusters', err);
                 setIsDataLoading(false);
                 endMeasure();
             });
-    }, [showJsPOI, showPsPOI]);
+    }, [showJsPOI, showPsPOI, reportFetchError, onConnectionRecovered]);
 
     // 视口变化时加载详细数据
     const handleMoveEnd = useCallback((bbox, zoom) => {
@@ -261,14 +280,18 @@ function MapView({
         if (config && zoom >= config.zoomConfig.showCells) {
             const endMeasureCells = perf.startMeasure('Fetch Cells');
             apiFetch(`/api/cells?bbox=${bbox}&zoom=${zoom}`)
-                .then(res => res.json())
+                .then(async (res) => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
                 .then(data => {
                     setCells(data);
                     endMeasureCells();
                     perf.setCount('Cells', data.features?.length || 0);
+                    onConnectionRecovered?.();
                 })
                 .catch(err => {
-                    console.error('Failed to load cells:', err);
+                    reportFetchError('grid cells', err);
                     endMeasureCells();
                 });
         } else {
@@ -283,15 +306,19 @@ function MapView({
             const url = `/api/pois?bbox=${bbox}&zoom=${zoom}&type=all`;
 
             apiFetch(url)
-                .then(res => res.json())
+                .then(async (res) => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
                 .then(data => {
                     setPois(data);
                     setIsDataLoading(false);
                     endMeasure();
                     perf.setCount('Markers (Detail)', data.features?.length || 0);
+                    onConnectionRecovered?.();
                 })
                 .catch(err => {
-                    console.error('Failed to load POIs:', err);
+                    reportFetchError('school points', err);
                     setIsDataLoading(false);
                     endMeasure();
                 });
@@ -299,7 +326,7 @@ function MapView({
             setPois(null);
             perf.setCount('Markers (Detail)', 0);
         }
-    }, [config]);
+    }, [config, reportFetchError, onConnectionRecovered]);
 
     const handleZoomChange = useCallback((zoom) => {
         onZoomChange(zoom);
