@@ -22,6 +22,21 @@ function App() {
     const [configRetryKey, setConfigRetryKey] = useState(0);
     const net = useNetworkStats();
     const isFetching = net.inFlight > 0;
+    const [renderElapsedSec, setRenderElapsedSec] = useState(0);
+
+    // Local render phase timer (no network — just reassure the user)
+    useEffect(() => {
+        if (isFetching || connectionError || !isLoading) {
+            setRenderElapsedSec(0);
+            return undefined;
+        }
+        const started = performance.now();
+        setRenderElapsedSec(0);
+        const id = setInterval(() => {
+            setRenderElapsedSec((performance.now() - started) / 1000);
+        }, 200);
+        return () => clearInterval(id);
+    }, [isFetching, isLoading, connectionError]);
 
     const reportConnectionError = useCallback((message) => {
         setConnectionError(message || 'Unable to reach the data service. Please check the backend connection.');
@@ -139,7 +154,7 @@ function App() {
                                     ? 'SYNCING DATA...'
                                     : 'SYSTEM READY'}
                         </span>
-                        <div style={{ width: '1px', height: '12px', background: 'var(--color-border)' }}></div>
+                        <div style={{ width: '1px', height: '10px', background: 'var(--color-border)', opacity: 0.6 }}></div>
                         <span className="net-stat" title="API round-trip latency (TTFB)">
                             LAT {formatLatency(
                                 isFetching
@@ -147,19 +162,19 @@ function App() {
                                     : net.lastLatencyMs
                             )}
                         </span>
-                        <div style={{ width: '1px', height: '12px', background: 'var(--color-border)' }}></div>
+                        <div style={{ width: '1px', height: '10px', background: 'var(--color-border)', opacity: 0.6 }}></div>
                         <span className="net-stat" title="Download throughput of current / last API response">
                             SPD {formatSpeed(net.lastSpeedBps)}
                         </span>
                         {isFetching && (
                             <>
-                                <div style={{ width: '1px', height: '12px', background: 'var(--color-border)' }}></div>
+                                <div style={{ width: '1px', height: '10px', background: 'var(--color-border)', opacity: 0.6 }}></div>
                                 <span className="net-stat net-stat--active" title="In-flight API requests">
                                     ×{net.inFlight}
                                 </span>
                             </>
                         )}
-                        <div style={{ width: '1px', height: '12px', background: 'var(--color-border)' }}></div>
+                        <div style={{ width: '1px', height: '10px', background: 'var(--color-border)', opacity: 0.6 }}></div>
                         <span>ZOOM: {zoom.toFixed(1)}</span>
                     </div>
                 </header>
@@ -191,7 +206,7 @@ function App() {
                 )}
 
                 {/* Status Bar / Hint (Floating) */}
-                <div className={`insight-pill ${connectionError ? 'insight-pill--error' : isFetching ? 'insight-pill--fetching' : ''}`}>
+                <div className={`insight-pill ${connectionError ? 'insight-pill--error' : isFetching ? 'insight-pill--fetching' : isLoading ? 'insight-pill--rendering' : ''}`}>
                     {connectionError ? (
                         <span>Backend / database connection failed — check Railway service &amp; network</span>
                     ) : isFetching ? (
@@ -217,7 +232,14 @@ function App() {
                     ) : isLoading ? (
                         <>
                             <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div>
-                            <span style={{ color: 'var(--color-primary)' }}>Rendering spatial data...</span>
+                            <span style={{ color: 'var(--color-primary)' }}>Rendering spatial data…</span>
+                            <span className="insight-pill__meta">
+                                {renderElapsedSec.toFixed(1)}s local
+                                {net.lastBytes != null && (
+                                    <> · downloaded {formatBytes(net.lastBytes)} @ {formatSpeed(net.lastSpeedBps)}</>
+                                )}
+                                {net.lastLatencyMs != null && <> · LAT {formatLatency(net.lastLatencyMs)}</>}
+                            </span>
                         </>
                     ) : (
                         <>

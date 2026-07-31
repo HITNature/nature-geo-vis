@@ -259,7 +259,7 @@ code,
 
 .insight-pill {
   position: absolute;
-  bottom: 48px;
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(11, 17, 33, 0.85);
@@ -288,20 +288,29 @@ code,
   border-color: rgba(56, 189, 248, 0.35);
 }
 
+.insight-pill--rendering {
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
 .insight-pill__meta {
-  opacity: 0.75;
+  opacity: 0.72;
+  font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 
 .net-stat {
+  font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  opacity: 0.8;
 }
 
 .net-stat--active {
   color: var(--color-primary);
   font-weight: 600;
+  opacity: 1;
 }
 
 .map-approval-number {
