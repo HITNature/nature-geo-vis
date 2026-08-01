@@ -191,7 +191,7 @@ function updateCells() {
         writeJson(chunkPath, geo);
     }
 
-    console.log(`  ✅ 网格属性更新 ${updated}，未匹配 ${missing}（源表 ${rows.length}）`);
+    console.log(`  ☑ 网格属性更新 ${updated}，未匹配 ${missing}（源表 ${rows.length}）`);
 }
 
 /** 
@@ -234,7 +234,7 @@ function updateCities() {
     }
 
     writeJson(citiesPath, geo);
-    console.log(`  ✅ 城市属性更新 ${updated}/${rows.length}，未匹配 ${missing}`);
+    console.log(`  ☑ 城市属性更新 ${updated}/${rows.length}，未匹配 ${missing}`);
 }
 
 /** 
@@ -297,7 +297,7 @@ function updateJsPois() {
     });
 
     writeJson(oldPoisPath, { type: 'FeatureCollection', features });
-    console.log(`  ✅ 初中 POI ${features.length}（行政字段来自旧 pois 合并）`);
+    console.log(`  ☑ 初中 POI ${features.length}（行政字段来自旧 pois 合并）`);
 }
 
 /** PS_POI_level → pois_ps.geojson */
@@ -342,7 +342,7 @@ function updatePsPois() {
     });
 
     writeJson(path.join(dataDir, 'pois_ps.geojson'), { type: 'FeatureCollection', features });
-    console.log(`  ✅ 小学 POI ${features.length}`);
+    console.log(`  ☑ 小学 POI ${features.length}`);
 }
 
 console.log('=== 从 geodatabase.db 更新数据 ===');
@@ -352,5 +352,5 @@ updateCities();
 updateJsPois();
 updatePsPois();
 db.close();
-console.log('\n✅ 更新完成。下一步: npm run import-data（会重建 data/geodata.db）');
+console.log('\n☑ 更新完成。下一步: npm run import-data（会重建 data/geodata.db）');
 console.log('提示: boundaries.geojson 未改动（新库无国境线表）');

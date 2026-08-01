@@ -122,7 +122,7 @@ function importBoundaries() {
     });
 
     insertMany(data.features);
-    console.log(`  ✅ 导入 ${data.features.length} 条国境线`);
+    console.log(`  ☑ 导入 ${data.features.length} 条国境线`);
 }
 
 /**
@@ -191,7 +191,7 @@ function importCities() {
     });
 
     insertMany(data.features);
-    console.log(`  ✅ 导入 ${data.features.length} 个行政区划`);
+    console.log(`  ☑ 导入 ${data.features.length} 个行政区划`);
 }
 
 /**
@@ -299,7 +299,7 @@ function importCells() {
         process.stdout.write(`\r    已导入 ${Math.min(i + batchSize, total)}/${total} 个网格`);
     }
 
-    console.log(`\n  ✅ 导入 ${count} 个网格`);
+    console.log(`\n  ☑ 导入 ${count} 个网格`);
 }
 
 /**
@@ -383,13 +383,13 @@ function importPOIs() {
 
     const js = loadGeoJSON('pois');
     insertMany(js.features);
-    console.log(`  ✅ 导入初中 POI ${js.features.length}`);
+    console.log(`  ☑ 导入初中 POI ${js.features.length}`);
 
     const psPath = path.join(dataDir, 'pois_ps.geojson');
     if (fs.existsSync(psPath)) {
         const ps = JSON.parse(fs.readFileSync(psPath, 'utf-8'));
         insertMany(ps.features || []);
-        console.log(`  ✅ 导入小学 POI ${(ps.features || []).length}`);
+        console.log(`  ☑ 导入小学 POI ${(ps.features || []).length}`);
     } else {
         console.log('  跳过: pois_ps.geojson 不存在');
     }
@@ -544,9 +544,9 @@ function createAggregationViews() {
     const cityCount = db.prepare('SELECT COUNT(*) as c FROM pois_aggregated_city').get().c;
     const districtCount = db.prepare('SELECT COUNT(*) as c FROM pois_aggregated_district').get().c;
 
-    console.log(`  ✅ 省级聚合: ${provinceCount} 条`);
-    console.log(`  ✅ 市级聚合: ${cityCount} 条`);
-    console.log(`  ✅ 区县级聚合: ${districtCount} 条`);
+    console.log(`  ☑ 省级聚合: ${provinceCount} 条`);
+    console.log(`  ☑ 市级聚合: ${cityCount} 条`);
+    console.log(`  ☑ 区县级聚合: ${districtCount} 条`);
 }
 
 /**
@@ -589,10 +589,10 @@ try {
     db.exec('COMMIT');
     printStats();
 
-    console.log('\n✅ 数据导入完成!');
+    console.log('\n☑ 数据导入完成!');
 } catch (error) {
     db.exec('ROLLBACK');
-    console.error('\n❌ 导入失败:', error.message);
+    console.error('\n× 导入失败:', error.message);
     throw error;
 } finally {
     db.close();

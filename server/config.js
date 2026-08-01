@@ -1,6 +1,6 @@
 /**
  * 可配置的展示字段
- * 对齐 GCs_level / POI 展示字段（见 docs/NC_DATA_MAPPING.md）
+ * 对齐 GCs_level / POI 展示字段（见 docs/表字段映射.md）
  */
 export const displayFields = [
     // 1. 人口变化 (Population Grid Cells)

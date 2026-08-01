@@ -1,8 +1,15 @@
-# Web Worker 使用场景分析
+# Web Worker 优化
+
+> 与 [`性能优化说明.md`](./性能优化说明.md) 配套：本文侧重 **Worker 选型判断**；性能全链路与宣讲材料见性能文档。
+>
+> **落地状态（当前仓库）**
+> - ☑ OffscreenCanvas 渲染 Worker：`render-worker.js` + `OffscreenCanvasLayer`（`?perf` 可切换）
+> - ☑ Geometry Worker 能力代码：`geometry-worker.js`（主路径暂由服务端预聚合覆盖，作扩展储备）
+> - × 已弃用：在 Worker 中做 `fetch` + `JSON.parse`
 
 ## 问题重述
 
-**当前实现的误区：**
+**早期实验尝试失败（已改为其他方案）：**
 在 Worker 中做 `fetch()` + `JSON.parse()`，但实际收益很小，因为：
 1. `fetch` 本身就是异步的，不会阻塞主线程
 2. `JSON.parse()` 虽然是同步的，但对于几 MB 的数据只需几十 ms
@@ -29,20 +36,20 @@ self.postMessage(result);  // 序列化（structured clone）
 
 | 场景 | 是否适合 Worker | 原因 |
 |------|----------------|------|
-| 网络请求（fetch） | ❌ **不适合** | fetch 本身就是异步的，不阻塞主线程 |
+| 网络请求（fetch） | × **不适合** | fetch 本身就是异步的，不阻塞主线程 |
 | JSON 解析 | ⚠️ **收益小** | 除非数据量极大（>10MB），否则通信开销可能抵消收益 |
-| **几何计算** | ✅ **非常适合** | CPU 密集型，会阻塞主线程渲染 |
-| **空间过滤** | ✅ **非常适合** | 遍历大数组判断 BBox 碰撞 |
-| **动态聚类** | ✅ **非常适合** | K-means、DBSCAN 等算法计算量大 |
-| **图像处理** | ✅ **非常适合** | 像素级操作，可用 OffscreenCanvas |
-| **数据转换** | ✅ **适合** | 大批量格式转换、索引构建 |
+| **几何计算** | ☑ **非常适合** | CPU 密集型，会阻塞主线程渲染 |
+| **空间过滤** | ☑ **非常适合** | 遍历大数组判断 BBox 碰撞 |
+| **动态聚类** | ☑ **非常适合** | K-means、DBSCAN 等算法计算量大 |
+| **图像处理** | ☑ **非常适合** | 像素级操作，可用 OffscreenCanvas |
+| **数据转换** | ☑ **适合** | 大批量格式转换、索引构建 |
 
 ## 推荐的优化方案
 
 ### 方案 1：几何计算 Worker
 
 ```javascript
-// ✅ 在 Worker 中做 CPU 密集型的几何计算
+// ☑ 在 Worker 中做 CPU 密集型的几何计算
 worker.postMessage({
     type: 'FILTER_BY_BBOX',
     data: {
@@ -56,13 +63,13 @@ features.filter(f => pointInBbox(f.geometry.coordinates, bbox));
 ```
 
 **收益分析：**
-- 32,000 个点 × BBox 判断 = 主线程可能卡顿 50-100ms
+- 近 8 万点 × BBox 判断 = 主线程可能卡顿数十至上百 ms
 - 放到 Worker 后主线程可以继续渲染动画
 
 ### 方案 2：动态聚类 Worker
 
 ```javascript
-// ✅ 动态聚类（替代服务端预计算）
+// ☑ 动态聚类（替代服务端预计算）
 worker.postMessage({
     type: 'DYNAMIC_CLUSTER',
     data: {
@@ -80,7 +87,7 @@ worker.postMessage({
 ### 方案 3：OffscreenCanvas 渲染 Worker
 
 ```javascript
-// ✅ 离屏 Canvas 渲染（终极方案）
+// ☑ 离屏 Canvas 渲染（终极方案）
 const offscreen = canvas.transferControlToOffscreen();
 worker.postMessage({ canvas: offscreen }, [offscreen]);
 
@@ -90,21 +97,21 @@ const ctx = offscreen.getContext('2d');
 ```
 
 **收益分析：**
-- 32,000 个圆形绘制：主线程 200ms → Worker 渲染主线程 0ms
+- 近 8 万圆形绘制：主线程数百 ms → Worker 渲染主线程接近 0ms
 - **真正的零阻塞渲染**
 
 ## 优化优先级
 
 ### 当前瓶颈排序（从实测数据）
 
-1. **DOM Marker 渲染** ✅ 已用 Canvas 解决
-2. **Canvas 绘制阻塞** ⚠️ 可用 OffscreenCanvas + Worker
-3. **数据过滤** ⚠️ 可用 Worker 处理
-4. **网络/解析** ❌ 优化收益很小
+1. **DOM Marker 渲染** ☑ 已用 Canvas 解决（默认路径）
+2. **Canvas 绘制阻塞** ☑ 已提供 OffscreenCanvas + Worker（可切换演示）
+3. **数据过滤 / 空间查询** ☑ 服务端 R-Tree 已覆盖主路径；客户端 Geometry Worker 作储备
+4. **网络/解析** ⚠️ 下一阶段重点（MVT / Protobuf），Worker 收益有限
 
-### 建议实施顺序
+### 实施顺序与状态
 
-#### Phase 1: OffscreenCanvas（高优先级）
+#### Phase 1: OffscreenCanvas ☑ 已落地
 ```javascript
 // src/workers/render-worker.js
 self.onmessage = (e) => {
@@ -115,7 +122,7 @@ self.onmessage = (e) => {
 };
 ```
 
-#### Phase 2: 几何计算（中优先级）
+#### Phase 2: 几何计算 ☑ 代码就绪 / 主路径未强制接入
 ```javascript
 // src/workers/geometry-worker.js
 // - BBox 过滤
@@ -123,7 +130,7 @@ self.onmessage = (e) => {
 // - 坐标变换
 ```
 
-#### Phase 3: 增量更新（中优先级）
+#### Phase 3: 增量更新 ⏳ 路线图
 ```javascript
 // 只传输变化的数据，不是每次都传全量
 worker.postMessage({
@@ -133,13 +140,14 @@ worker.postMessage({
 }, [newPoints.buffer]);
 ```
 
-## 实测对比（预估）
+## 路径对比（实测 / 预估）
 
-| 方案 | FPS (1000 points) | FPS (10000 points) | 主线程占用 |
-|------|-------------------|-------------------|-----------|
-| 当前（Canvas） | 60 | 30-40 | 高 |
-| + Geometry Worker | 60 | 50-55 | 中 |
-| + OffscreenCanvas | 60 | 60 | 低 |
+| 方案 | FPS (1000 points) | FPS (10000 points) | 主线程占用 | 状态 |
+|------|-------------------|-------------------|-----------|------|
+| DOM Marker | &lt; 10 | 不可用 | 极高 | 已淘汰 |
+| Canvas（默认） | 60 | 30–40 | 中高 | ☑ 生产默认 |
+| + OffscreenCanvas | 60 | 60 | 低 | ☑ 可切换 |
+| + Geometry Worker | 60 | 50–55 | 中 | 储备 |
 
 ## 代码示例：OffscreenCanvas
 
@@ -179,8 +187,8 @@ useEffect(() => {
 2. 数据传输有序列化成本，考虑用 `Transferable Objects`
 3. 优先优化主线程瓶颈（测量后决定）
 
-**您项目的最佳实践：**
-1. 保留当前的 Canvas 渲染（已经很好）
-2. 考虑 OffscreenCanvas 替代主线程 Canvas 绘制
-3. 如果未来做动态聚类，可以用 Geometry Worker
-4. **移除当前的 fetch Worker**（收益不明显）
+**本项目最佳实践：**
+1. 默认使用 Canvas 渲染（主路径稳定、兼容性好）
+2. 高密度场景用 OffscreenCanvas Worker（PERF 面板可切换对比）
+3. 动态聚类 / 客户端几何运算需要时再挂 Geometry Worker
+4. **不要**把 `fetch` + `JSON.parse` 塞进 Worker（收益不明显，已弃用）

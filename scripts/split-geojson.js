@@ -122,7 +122,7 @@ function splitGeoJSON(filename) {
         fs.renameSync(filepath, backupPath);
     }
 
-    console.log(`  ✅ ${filename} 分片完成\n`);
+    console.log(`  ☑ ${filename} 分片完成\n`);
 }
 
 /**
@@ -156,7 +156,7 @@ function mergeChunks(chunksDir, outputFile) {
     };
 
     fs.writeFileSync(outputFile, JSON.stringify(mergedData));
-    console.log(`✅ 合并完成: ${outputFile} (${allFeatures.length} 个特征)`);
+    console.log(`☑ 合并完成: ${outputFile} (${allFeatures.length} 个特征)`);
 }
 
 // 主程序

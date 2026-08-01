@@ -458,7 +458,7 @@ try {
         console.log(`  GET /api/pois/aggregated?level= - 获取聚合数据`);
     });
 } catch (error) {
-    console.error('❌ 启动失败:', error.message);
+    console.error('× 启动失败:', error.message);
     console.error('\n请确保已运行数据导入脚本:');
     console.error('  npm run import-data');
     process.exit(1);

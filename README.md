@@ -1,453 +1,254 @@
-# 教育资源分布可视化
-> Github: https://github.com/HITNature/nature-geo-vis
+# 中国基础教育设施地图集（Nature Geo Vis）
 
-数据可视化项目，用于展示和探索基于geodatabase的教育资源分布数据。
+> 仓库：https://github.com/HITNature/nature-geo-vis
+
+将 ArcGIS geodatabase 中的全国教育设施与人口网格数据（2010→2020 年变化）做成可交互的全国尺度 Web 地图：按视口动态加载、按缩放层级 LOD 聚合、前端 Canvas / OffscreenCanvas Worker 批量渲染。
 
 **在线访问**
-- **前端**：https://nature-geo-vis.pages.dev
-- **后端 API**：https://nature-geo-vis-server-production.up.railway.app
 
-## 项目概述
+| 角色 | 地址 |
+|------|------|
+| 前端 | https://nature-geo-vis.pages.dev |
+| 后端 API | https://nature-geo-vis-server-production.up.railway.app |
+| 运行库 Release | https://github.com/HITNature/nature-geo-vis/releases/tag/v1.0.0-data |
 
-将ArcGIS geodatabase格式的地理数据转换为Web可视化应用，提供交互式地图展示中国教育资源的分布情况。整体为一个基于 TypeScript 的 Web 全栈项目，实现高性能的地理数据可视化。
+本地性能面板：在 URL 后加 `?perf`（如 `http://localhost:5173/?perf`）。
 
-### 设计目标
+---
 
-原始设计包含以下可视化内容：
+## 功能概览
 
-1. **区域划分（静态底图）**
-   - China_city_pl：中国国境线
-   - China_city_pg：中国行政区划
+- **国境线 / 行政区划**：边界展示，城市悬停 Tooltip（含英文名）
+- **1km 网格**：约 17.7 万格，5 套数据层（总人口变化 / 小学学龄人口 / 初中学龄人口 / 小学可达距离 / 初中可达距离），四色分级着色，可随时切换
+- **学校 POI**：初中（JS）+ 小学（PS），合计约 **7.8 万** 点；红色表示服务人口增加 / 距离变远，绿色表示改善
+- **行政 LOD**：省 → 市 → 区县 → 详细点位，随 Zoom 自动切换，预聚合气泡可下钻
+- **搜索**：内部地点 / POI 检索，无结果时自动回退至 OSM Nominatim 地理编码
+- **详情面板**：可拖拽浮动（Pointer Events API），支持 POI 与网格单元两种展示模式
 
-2. **详细数据（可交互元素）**
-   - China_city_cell：城市区域1km网格分割（177,611个网格）
-     - 展示字段：wpop change, pop6-11 change, pop12-14 change, ed ps change, ed js change
-   - China_city_POI_JS2020：2020年城市初中POI点（32,231个）
-     - 展示字段：name, survive pop change
+### 当前数据规模（`data/geodata.db`）
 
-## 当前进展
+| 图层 | 数量 |
+|------|------|
+| POI | **78,444**（JS 32,231 + PS 46,213） |
+| 网格 cells | **177,610** |
+| 行政区 cities | 355 |
+| 国境线 boundaries | 7 |
 
-### 已完成
+源库表为 NC 命名（`GCs_level` / `city_level` / `JS_POI_level` / `PS_POI_level`），见 [表字段映射](docs/表字段映射.md)。
 
-1. **数据转换**
-   - 成功将geodatabase（SQLite格式）中的POI数据转换为GeoJSON格式
-   - POI数据量：32,231个初中POI点
-   - 数据文件大小：6.3MB
-
-2. **后端服务**
-   - 基于Express的Node.js服务器
-   - 实现按视口（bbox）过滤的数据API
-   - 支持按缩放级别（zoom level）控制数据加载
-   - RESTful API接口设计
-
-3. **前端可视化**
-   - 基于React + Leaflet的交互式地图
-   - 暗色主题底图（CARTO Dark）
-   - POI点击查看详情功能
-   - 响应式设计和现代化UI
-
-4. **性能优化**
-   - Web Worker 后台数据处理（6倍性能提升）
-   - Canvas 渲染替代 DOM Marker（FPS 从 <10 提升至 60+）
-   - 实时性能监控面板（左上角 PERF MONITOR）
-   - 地图瓦片加载优化（预加载、平滑过渡）
-
-### ✅ 完整数据可视化
-
-**数据转换状态（全部成功）**：
-
-**影响范围**：
-- China_city_pl（国境线）- ✅ 转换成功（7条记录）
-- China_city_pg（行政区划）- ✅ 转换成功（355个区域）
-- China_city_cell（网格数据）- ✅ 转换成功（177,610个网格）
-- China_city_POI_JS2020（POI数据）- ✅ 转换成功（32,231个点位）
-
-### 当前实现
-
-**完整实现所有设计目标的地理数据可视化**：
-- **国境线图层**：显示中国边界线（红色虚线样式）
-- **行政区划图层**：355个城市区域边界（青色半透明填充，支持悬停高亮和城市名提示）
-- **网格数据图层**：177,610个1km网格，按人口变化着色（绿色=增长，红色=减少）
-- **POI点位图层**：32,231个初中POI点的高性能层级化展示
-- **行政分级聚合**：按"省-市-区"自动汇总数据，支持多级下钻探索
-- 按视口动态加载数据，支持海量点位顺滑交互
-- 点击网格显示详细统计信息（人口变化、学校数量变化、教育距离变化）
-- 自动同步地图气泡与侧边详情面板的状态
+---
 
 ## 技术栈
 
-### 后端
-- **Node.js** - JavaScript运行时
-- **Express** - Web服务器框架
-- **better-sqlite3** - SQLite数据库操作
+| 层 | 技术 |
+|----|------|
+| 前端 | React 18、Vite、Leaflet、react-leaflet、Canvas / OffscreenCanvas Worker |
+| 后端 | Node.js、Express、**better-sqlite3**（R-Tree 视口查询） |
+| 数据 | 源：`geodatabase.db`；中间 GeoJSON / 分片；运行库：`data/geodata.db` |
+| 部署 | 前端 Cloudflare Pages；后端 Railway（Volume + Release 拉库） |
 
-### 前端
-- **React 18** - UI框架
-- **Vite** - 构建工具和开发服务器
-- **Leaflet** - 开源地图库
-- **react-leaflet** - Leaflet的React封装
-- **Web Workers** - 后台数据处理
-- **Canvas API** - 高性能点位渲染
+生产默认入口：`npm run server` → `server/index-sqlite.js`（不是内存全量 GeoJSON 的 legacy 路径）。
 
-### 数据格式
-- **GeoJSON** - 地理数据交换格式
-- **SQLite/geodatabase** - 原始数据源
+---
 
-## 项目结构
+## 文档目录
+
+| 文档 | 说明 |
+|------|------|
+| [系统架构与设计解析](docs/系统架构与设计解析.md) | **全系统架构、设计决策、性能优化的综合说明（推荐首读）** |
+| [数据管线文档](docs/数据管线文档.md) | 源表 → 清洗 → 导入 SQLite 的完整流转 |
+| [数据更新与上云文档](docs/数据更新与上云文档.md) | 日常换库、`import-data`、Release、`GEODATA_DB_SIZE` |
+| [表字段映射](docs/表字段映射.md) | NC 表与匹配键（名称 / OBJECTID 边界） |
+| [前后端服务部署文档](docs/前后端服务部署文档.md) | Pages + Railway 部署与环境变量 |
+| [前后端服务部署检查](docs/前后端服务部署检查.md) | 发版勾选清单 |
+| [性能优化说明](docs/性能优化说明.md) | 全链路性能、基准与宣讲要点 |
+| [WEB_WORKER_GUIDE](docs/WEB_WORKER_GUIDE.md) | Worker / OffscreenCanvas 选型 |
+| [AGENTS.md](AGENTS.md) | AI / 协作者避坑（数据同步、后端重启等） |
+
+---
+
+## 项目结构（摘要）
 
 ```
 nature-geo-vis/
-├── data/                      # 转换后的GeoJSON数据
-│   ├── boundaries.geojson     # 国境线（TODO）
-│   ├── cities.geojson         # 城市边界（TODO）
-│   ├── cells.geojson          # 网格数据（TODO）
-│   └── pois.geojson           # POI数据 ✓
-├── docs/                       # 技术文档
-│   └── PERFORMANCE.md         # 性能优化技术文档 ✓
-├── server/                    # 后端服务
-│   ├── index.js              # Express服务器主文件
-│   └── config.js             # 服务器配置
-├── src/                       # 前端源码
-│   ├── components/           # React组件
-│   │   ├── MapView.jsx      # 地图视图组件
-│   │   ├── DetailPanel.jsx  # 详情面板组件
-│   │   ├── CanvasMarkerLayer.jsx  # Canvas渲染层 ✓
-│   │   └── PerformanceMonitor.jsx # 性能监控面板 ✓
-│   ├── utils/                # 工具函数
-│   │   └── perf.js          # 性能追踪工具 ✓
-│   ├── workers/              # Web Workers
-│   │   ├── render-worker.js # OffscreenCanvas 渲染 Worker ✓
-│   │   └── geometry-worker.js # 几何计算 Worker ✓
-│   ├── App.jsx              # 主应用组件
-│   ├── main.jsx             # 应用入口
-│   └── index.css            # 全局样式
-├── scripts/                   # 数据处理脚本
-│   ├── convert-geodata.js   # geodatabase转换脚本
-│   └── generate-mock-data.js # 模拟数据生成
-├── geodatabase.db            # 原始geodatabase文件（127MB）
-├── background.md             # 需求文档
-├── package.json              # 项目配置
-└── vite.config.js           # Vite配置
-
+├── data/                      # 本地数据（大文件多被 gitignore）
+│   ├── geodata.db             # 运行库（服务端唯一依赖，约 425MB）
+│   ├── cells_chunks/          # 网格几何分片 + 属性
+│   ├── cities.geojson
+│   ├── boundaries.geojson
+│   ├── pois.geojson           # 初中
+│   └── pois_ps.geojson        # 小学
+├── docs/                      # 技术文档（见上表）
+├── server/
+│   ├── index-sqlite.js        # 生产 / 开发默认后端
+│   ├── index.js               # legacy（内存 GeoJSON）
+│   └── config.js              # 缩放与展示字段
+├── src/
+│   ├── components/            # MapView、Legend、SearchBox、Canvas / Offscreen 层等
+│   ├── workers/               # render-worker、geometry-worker
+│   └── utils/                 # api.js、perf.js
+├── scripts/
+│   ├── update-from-nc.js      # 日常：从 geodatabase 刷属性 / 导出 POI
+│   ├── import-to-sqlite.js    # 重建 geodata.db
+│   ├── ensure-db.js           # Railway 冷启动拉库
+│   ├── convert-raw-data.js    # 几何重建（raw-data → WGS84）
+│   └── …                      # split / convert（遗留）/ export_arcpy 等
+├── geodatabase.db             # 源库（gitignore，约 85MB）
+├── railway.toml
+└── package.json
 ```
 
+`raw-data/` 仅在**重建面线几何**时需要；日常更新不依赖它。
+
+---
 
 ## 快速开始
 
-### 环境要求
+### 环境
 
-- Node.js >= 14.0.0
-- npm >= 6.0.0
+- Node.js **≥ 18**（推荐，与 better-sqlite3 / Vite 5 匹配）
+- npm ≥ 8
+- 本地需已有 `data/geodata.db`（自行 `import-data`，或从 Release 下载）
 
-### 安装依赖
+### 安装与启动
 
 ```bash
 npm install
-```
 
-### 启动开发服务器
-
-需要同时启动后端和前端服务：
-
-```bash
-# 方式 1: 使用并发启动（推荐）
+# 推荐：前后端一起开
 npm run web
 
-# 方式 2: 分别启动
-# 终端1: 启动后端服务器（端口 3001）
-npm run server
-
-# 终端2: 启动前端开发服务器（端口 5173）
-npm run dev
+# 或分别：
+# npm run server   # http://localhost:3001  → index-sqlite.js
+# npm run dev      # http://localhost:5173
 ```
 
-### 访问应用
+若没有运行库：
 
-- **前端页面**: http://localhost:5173/
-- **后端API**: http://localhost:3001/
+```bash
+# 将交付的 .geodatabase 覆盖为根目录 geodatabase.db 后：
+npm run update-from-nc
+npm run import-data
+```
 
-## 生产部署
+### 常用脚本
 
-本项目采用**前后端分离部署**方案：
-- **前端**：Cloudflare Pages（全球 CDN + 自动构建）
-- **后端**：Railway（Node.js 长期服务）
+| 命令 | 作用 |
+|------|------|
+| `npm run web` | 同时启动后端 + 前端 |
+| `npm run update-from-nc` | NC 源库 → 更新分片 / 城市 / POI GeoJSON |
+| `npm run import-data` | 重建 `data/geodata.db`（会删旧库） |
+| `npm run build` / `preview` | 前端生产构建与预览 |
+| `npm run server:legacy` | 旧版内存 GeoJSON 服务（不推荐） |
+| `npm run convert` | **遗留**：读旧表名，当前 NC 源库不可用 |
 
-| 平台 | 项目 / 域名 |
-|------|-------------|
-| GitHub | [HITNature/nature-geo-vis](https://github.com/HITNature/nature-geo-vis) |
-| Cloudflare Pages | https://nature-geo-vis.pages.dev |
-| Railway | https://nature-geo-vis-server-production.up.railway.app |
+数据与上云完整步骤：[数据更新与上云文档](docs/数据更新与上云文档.md)。
 
-### 快速部署
+---
 
-1. **部署后端**（Railway）：
-   - 访问 [railway.app](https://railway.app/)
-   - 连接 GitHub 仓库 `HITNature/nature-geo-vis`
-   - 配置环境变量 `FRONTEND_URL=https://nature-geo-vis.pages.dev`
+## 生产部署（摘要）
 
-2. **部署前端**（Cloudflare Pages）：
-   - 访问 [Cloudflare Dashboard](https://dash.cloudflare.com/) → Workers & Pages
-   - 连接同一 GitHub 仓库
-   - 配置环境变量 `VITE_API_BASE_URL=https://nature-geo-vis-server-production.up.railway.app`（末尾不要加 `/`）
+- **前端**：Cloudflare Pages，`VITE_API_BASE_URL` = Railway 后端（无尾 `/`）
+- **后端**：Railway，`startCommand` = `node scripts/ensure-db.js && npm run server`
+- **必配**：`GEODATA_DB_URL`、`GEODATA_DB_SIZE`、`FRONTEND_URL`，并挂载 Volume 到 `data/`
+- **数据不进 Git**：改库后需 `gh release upload v1.0.0-data data/geodata.db --clobber` 并更新字节数
 
-📖 **详细部署指南**: 查看 [`DEPLOYMENT.md`](./DEPLOYMENT.md)
+详见 [前后端服务部署文档](docs/前后端服务部署文档.md) 与 [部署检查清单](docs/前后端服务部署检查.md)。
 
 ### 环境变量
 
-**开发环境** (`.env.development`):
-```bash
-VITE_API_BASE_URL=  # 留空，使用 Vite proxy
-```
+**开发**（`.env.development`）：`VITE_API_BASE_URL` 留空，走 Vite proxy。
 
-**生产环境** (Cloudflare Pages):
+**前端生产（Pages）**：
+
 ```bash
 VITE_API_BASE_URL=https://nature-geo-vis-server-production.up.railway.app
 ```
 
-**后端环境** (Railway):
+**后端生产（Railway）**：
+
 ```bash
-PORT=3001  # 开发环境，生产环境由平台自动设置
 NODE_ENV=production
 FRONTEND_URL=https://nature-geo-vis.pages.dev
+GEODATA_DB_URL=<Release 上 geodata.db 直链>
+GEODATA_DB_SIZE=<本地 stat 精确字节数>
 ```
-## API接口
-
-### 配置接口
-```
-GET /api/config
-```
-返回前端配置信息（展示字段、缩放配置等）
-
-### 数据接口
-
-```
-GET /api/boundaries
-```
-获取国境线数据（当前为空）
-
-```
-GET /api/cities?bbox=west,south,east,north
-```
-获取城市边界数据，支持视口过滤（当前为空）
-
-```
-GET /api/cells?bbox=west,south,east,north&zoom=10
-```
-获取网格数据，支持视口过滤和缩放级别控制（当前为空）
-
-```
-GET /api/cell/:id
-```
-获取指定ID的网格详情（当前无数据）
-
-```
-GET /api/pois?bbox=west,south,east,north&zoom=10
-```
-获取POI数据，支持视口过滤和缩放级别控制
-
-### 瓦片接口
-
-```
-GET /api/tiles/:layer/:z/:x/:y.json
-```
-获取指定层（`cells` 或 `pois`）在特定缩放级别和坐标下的瓦片数据（GeoJSON格式）。该接口用于支持大规模数据的高性能加载。
-
-**示例请求**：
-```bash
-curl "http://localhost:3001/api/pois?bbox=103,31,105,33&zoom=10"
-```
-
-## 配置说明
-
-### 缩放级别配置 (`server/config.js`)
-
-```javascript
-export const zoomConfig = {
-    showCities: 4,    // 缩放级别 >= 4 显示城市边界
-    showCells: 8,     // 缩放级别 >= 8 显示网格
-    poiLevels: {
-        province: 0,  // 0-7 级显示省级聚合（蓝色）
-        city: 8,      // 8-10 级显示市级聚合（橙色）
-        district: 11, // 11-12 级显示区县级聚合（绿色）
-        detail: 13    // >= 13 级显示详细学校点位
-    },
-};
-```
-
-### 展示字段配置
-
-**网格数据字段** (displayFields):
-- wpop change
-- pop6-11 change
-- pop12-14 change
-- ed ps change
-- ed js change
-
-**POI数据字段** (poiDisplayFields):
-- name（学校名称）
-- survive pop change（人口变化）
-
-## 开发指南
-
-### 数据转换
-
-如需重新转换geodatabase数据：
-
-```bash
-npm run convert
-```
-
-**注意**：由于编码问题，当前只有POI数据能成功转换。
-
-### 构建生产版本
-
-```bash
-npm run build
-```
-
-构建产物会输出到 `dist/` 目录。
-
-### 预览生产构建
-
-```bash
-npm run preview
-```
-
-## 故障排查
-
-### 问题：地图不显示数据
-
-**原因**：需要放大到足够的缩放级别
-**解决**：放大地图到城市级别（缩放级别 ≥ 10）
-
-### 问题：后端API返回空数据
-
-**原因**：
-1. boundaries、cities、cells数据转换失败，文件为空
-2. 缩放级别不够（POI需要zoom >= 10）
-
-**解决**：
-1. 对于POI数据：放大到缩放级别10或更高
-2. 对于其他数据：需要解决原始geodatabase的编码问题
-
-### 问题：数据转换失败
-
-**原因**：geodatabase中的数据使用了特殊编码（可能是中文Windows编码）
-
-**可能的解决方案**：
-1. 使用ArcGIS Pro或QGIS重新导出数据为标准GeoJSON
-2. 使用`ogr2ogr`工具指定正确的编码进行转换：
-   ```bash
-   ogr2ogr -f "GeoJSON" output.geojson geodatabase.db table_name \
-     -lco ENCODING=UTF-8 -oo ENCODING=GBK
-   ```
-3. 使用Python的`geopandas`库进行转换
-
-## 性能优化
-
-### 已实现的优化
-1. **视口过滤**：只加载当前可见区域的数据
-2. **缩放级别控制**：根据缩放级别决定是否加载数据
-3. **服务端瓦片索引 (Tile-based)**：利用 `geojson-vt` 在服务端动态生成瓦片索引，支持大数据量的高性能请求
-4. **层级化行政聚合 (Hierarchical Administrative Clustering)**：摒弃传统的基于物理距离的盲目聚合，实现了按“省-市-区”行政隶属关系的层级化实时汇总。通过后端分级索引提升了海量点位的下钻查询性能。
-5. **服务端缓存**：geodata 在服务器启动时一次性加载到内存并建立瓦片索引
-6. **前端按需请求**：地图移动或缩放时动态请求数据
-
-## 交互体验优化 (UI/UX)
-
-1. **视觉设计系统**：
-   - 深邃午夜蓝背景，高对比度的青色 (Cyan) 和靛蓝 (Indigo) 强调色，营造专业且高端的科研工具感。
-   - 广泛应用 透明玻璃 效果，使 UI 层级清晰且不遮挡地图细节。
-
-2. **渲染状态实时反馈**：
-   - **动态状态栏**：位于屏幕底部的状态栏实时反馈数据加载（Fetching）、瓦片同步（Syncing）和空间渲染（Rendering）的生命周期。
-   - **脉冲动画**：加载过程中状态点通过脉冲动画提示后台活动，增强用户感知的响应性。
-   - **全局等待指针**：由于地理数据渲染可能涉及大量 DOM 操作，在渲染繁忙期，鼠标指针会自动切换为 `wait` 状态，告知用户正在处理中。
-
-3. **自由布局交互界面**：
-   - **双向联动关闭**：点击地图气泡关闭按钮自动收起详情面板，反之亦然，保持 UI 状态高度一致性。
-   - **可拖拽详情面板**：右侧详情面板通过浮动玻璃层展示，支持用户自由拖拽至屏幕任何位置，确保在大屏探索时重要地图区域不被遮挡。
-
-4. **多级地理尺度可视化**：
-   - **视口动态切换**：地图根据缩放级别自动切换统计口径。低缩放 (Zoom 0-7) 展示省级规模，中缩放 (Zoom 8-10) 展示地级市规模，高缩放 (Zoom 11-12) 精细至区县，最高缩放 (Zoom 13+) 渲染具体学校点位。
-   - **拟态视觉设计**：聚合点采用极简的半透明圆圈设计（20% 不透明度），移除硬朗边框，将行政区名与统计数字垂直整合于圆圈内部，实现了“信息即设计”的现代观感。
-
-### 已完成的性能优化
-
-> 💡 **详细技术文档**：
-> - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) - 性能分析、优化方案、基准测试
-> - [`docs/WEB_WORKER_GUIDE.md`](docs/WEB_WORKER_GUIDE.md) - Web Worker 使用场景分析
-
-1. **OffscreenCanvas 渲染** (`src/workers/render-worker.js`)：将 Canvas 绘制操作移入 Worker 线程，主线程**零阻塞**。开启方式：PERF MONITOR 面板中开启 `OFFSCREEN CANVAS` 开关。
-2. **Canvas 渲染替代 DOM Marker** (`src/components/CanvasMarkerLayer.jsx`)：使用 Leaflet Canvas Renderer 绘制所有 POI，DOM 节点从数千个降至 1 个 Canvas，FPS 保持 60+
-3. **细粒度性能监控** (`src/utils/perf.js`)：实时追踪 FPS、Tiles Loading、React Renders、Canvas Markers 等关键指标
-4. **地图瓦片优化** (`src/components/MapView.jsx` + `src/index.css`)：
-   - 瓦片预加载（keepBuffer）减少重复请求
-   - 缩放时禁用更新避免抖动
-   - CSS 硬件加速和平滑过渡
-
-### 未来可优化方向
-1. 实现虚拟滚动和增量渲染
-2. 采用矢量瓦片 (MVT) 或二进制传输 (Protobuf)
-
-
-#### 性能开销分布梳理
-
-| 环节 | 归属层级 | 主要开销点     | 当前实现说明                                                                                                                                                                        |
-| ------ | ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **数据查询**     | **服务端 (Server)**         | CPU / 内存     | **全量内存过滤：**  目前服务端在启动时将 `pois.geojson` 全量加载到内存，查询时使用 `.filter()` 遍历数组并进行 BBox 计算。数据量大时，CPU 压力随数据量线性增长。                                                                 |
-| **网络传输**     | **网络 (Network)**         | 带宽 / 延迟    | **GeoJSON 传输量：**  采用标准的文本格式传输。对于详细 POI，如果视口内有数千个点，返回的 JSON 体积（包含属性字段）会达到数 MB，导致排队等待和下载延迟。                                                  |
-| **聚类计算**     | **服务端 / 前端**         | 计算能力 (CPU) | **预处理模式：**  目前行政级别的聚合（省/市/区）是在**服务端启动时预计算**好的，请求时直接返回，所以运行时开销极低。但如果未来引入动态聚类，开销将显著增加。                                                               |
-| **地图渲染**     | **前端 (Browser)**         | GPU / 内存     | **Canvas/SVG 绘制：**  地图底图瓦片由浏览器 GPU 渲染。行政边界（Boundaries）作为矢量路径渲染，路径节点越多，渲染压力越大。                                                                                |
-| **数据点渲染**     | **前端 (Browser)**         | **Canvas (已优化)**               | **Canvas 渲染（已优化）：** 使用 Leaflet Canvas Renderer (`L.circleMarker`) 替代 DOM Marker，所有点统一绘制在同一 Canvas 上，彻底消除 DOM 爆炸问题，FPS 保持 60+。 |
 
 ---
 
-#### 系统当前性能瓶颈分析
+## API（`index-sqlite.js`）
 
-1. ~~**前端瓶颈 (最严重)**~~ **已解决**：通过 Canvas 渲染替代 DOM Marker，数据点渲染不再是瓶颈。
-2. **网络瓶颈**：**数据量过大**。直接请求大批量的 GeoJSON 特征点，没有采用二进制格式（如 Protocol Buffers）或矢量瓦片（MVT）。
-3. **服务端瓶颈**：**内存溢出风险**。全量加载 1.2亿+ 的原始数据（虽然目前只是一部分）会导致内存占用极高。
+| 方法 | 说明 |
+|------|------|
+| `GET /api/config` | 展示字段、缩放配置 |
+| `GET /api/health` | 健康检查（含 `poisCount`） |
+| `GET /api/boundaries` | 国境线 |
+| `GET /api/cities?bbox=` | 城市边界（可选视口） |
+| `GET /api/cells?bbox=&zoom=` | 网格（需 bbox） |
+| `GET /api/cell/:id` | 单格详情 |
+| `GET /api/pois?bbox=&zoom=&type=` | 详细 POI；`type` = `js` / `ps` / `all` |
+| `GET /api/pois/aggregated?level=&type=` | 省 / 市 / 区预聚合 |
+| `GET /api/search?q=` | 地点与 POI 搜索 |
 
+```bash
+curl "http://localhost:3001/api/health"
+curl "http://localhost:3001/api/pois?bbox=103,31,105,33&zoom=14&type=all"
+```
 
-#### 基础设施已就绪
+> `/api/tiles/...` 仅存在于 legacy `server/index.js`，默认服务端未挂载。
 
-**Perf Monitor** 已经上线，它可以实时监控：
+---
 
-* **FPS**：直接反映“数据点渲染”对主线程的阻塞程度。
-* **Load Times**：通过
+## 缩放与图层
 
-  ```inline
-  Load Aggr Data
-  ```
+```javascript
+// server/config.js（摘要）
+zoomConfig = {
+  showCities: 4,
+  showCells: 8,
+  poiLevels: {
+    province: 0,   // 0–7 省级聚合
+    city: 8,       // 8–10 市级
+    district: 11,  // 11–12 区县
+    detail: 13     // ≥13 详细 POI
+  }
+}
+```
 
-  和
+网格指标与 POI 字段配置见 `server/config.js` 的 `displayFields` / `poiDisplayFields`。
 
-  ```inline
-  Fetch Detailed POIs
-  ```
+---
 
-  可以观察到“数据查询 + 网络传输”的总时长。
-* **Marker Counts**：量化当前导致卡顿的 DOM 节点数量。
+## 性能要点
 
-## Roadmap & TODO
+| 环节 | 现状 |
+|------|------|
+| 空间查询 | SQLite **R-Tree** 视口检索（非全表内存 filter），O(log n) 复杂度 |
+| 聚合数据 | 导入时预物化省 / 市 / 区统计表（含 JS / PS / ALL），查询为常数时间 |
+| 点位渲染 | 默认 **Canvas**（L.Canvas 批绘，消除 78K DOM 节点）；可选 OffscreenCanvas Worker（`?perf` 面板切换） |
+| 网络反馈 | 流式字节计数（ReadableStream），实时显示下载速率 / 已传输量 / 延迟 |
+| 底图 | CARTO Dark + `keepBuffer=4` 预缓冲 + 空闲更新 + GPU 合成层 + 淡入过渡 |
 
-### ✅ 已完成目标
+详解：[系统架构与设计解析](docs/系统架构与设计解析.md)、[性能优化说明](docs/性能优化说明.md)、[WEB_WORKER_GUIDE](docs/WEB_WORKER_GUIDE.md)。
 
-**短期目标已实现：成功转换国境线、行政区划、网格数据**
+---
 
-数据解析情况（全部成功）：
-  - boundaries: ✅ 7 条记录转换成功
-  - cities: ✅ 355 个区域转换成功
-  - cells: ✅ 177,610 个网格转换成功（从 EPSG:32649 UTM 49N 投影坐标系转换到 WGS84）
-  - POIs: ✅ 32,231 条记录转换成功
+## 故障排查
 
-数据来源：数据提供者使用 ArcGIS Pro 将3个图层导出为 GeoJSON 格式:
-  1. China_city_pl → china_pl.geojson → boundaries.geojson
-  2. China_city_pg → china_pg.geojson → cities.geojson
-  3. China_city_cell → china_cell.geojson → cells.geojson
+| 现象 | 处理 |
+|------|------|
+| 地图无详细点 | 放大到 Zoom ≥ **13**（不是 10） |
+| 无网格 | Zoom ≥ **8**，并确认 `geodata.db` 存在 |
+| 改了 API 仍 404 | 后端无 HMR，重启 `npm run server` / `npm run web` |
+| Railway `no such column` | 重建库 → Release `--clobber` → 更新 `GEODATA_DB_SIZE` → Redeploy |
+| 城市标签错位 | 按**名称**对齐，勿用 OBJECTID（见 AGENTS / 表字段映射） |
+| `npm run convert` 失败 | 预期：旧表名已不存在；请用 `update-from-nc` |
 
-### 下一步优化方向
-1. 实现虚拟滚动和增量渲染
-2. 采用矢量瓦片 (MVT) 或二进制传输 (Protobuf)
-3. 优化大量网格数据的渲染性能
+---
+
+## 开发注意
+
+- 修改后端后**必须重启** Express（无 HMR）
+- `import-data` 会**删除并重建**整个 `geodata.db`
+- 属性合并使用**城市名 / 学校名**作为连接键，勿依赖 OBJECTID（版本间不稳定）
+- 协作者 / Agent 规约见 [AGENTS.md](AGENTS.md)

@@ -101,7 +101,7 @@ function processGeoJSON(inputPath, outputPath, srcProj, name) {
         console.log(`   Parsing JSON...`);
         geojson = JSON.parse(content);
     } catch (e) {
-        console.error(`   ❌ Error reading file: ${e.message}`);
+        console.error(`   × Error reading file: ${e.message}`);
         return;
     }
 
@@ -138,7 +138,7 @@ function processGeoJSON(inputPath, outputPath, srcProj, name) {
     const outputSize = fs.statSync(outputPath).size;
     const elapsed = Date.now() - startTime;
 
-    console.log(`   ✅ Done in ${(elapsed / 1000).toFixed(1)}s`);
+    console.log(`   ☑ Done in ${(elapsed / 1000).toFixed(1)}s`);
     console.log(`   Output: ${outputPath}`);
     console.log(`   Output size: ${(outputSize / 1024 / 1024).toFixed(2)} MB`);
 
