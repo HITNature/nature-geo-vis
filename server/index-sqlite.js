@@ -32,6 +32,7 @@ function initDatabase() {
     // 输出数据统计
     const stats = {
         boundaries: db.prepare('SELECT COUNT(*) as c FROM boundaries').get().c,
+        china_boundary: db.prepare('SELECT COUNT(*) as c FROM china_boundary').get().c,
         cities: db.prepare('SELECT COUNT(*) as c FROM cities').get().c,
         cells: db.prepare('SELECT COUNT(*) as c FROM cells').get().c,
         pois: db.prepare('SELECT COUNT(*) as c FROM pois').get().c,
@@ -50,6 +51,15 @@ function prepareQueries() {
     // Boundaries - 全量返回（数据量小）
     queries.allBoundaries = db.prepare(`
         SELECT geometry, properties FROM boundaries
+    `);
+
+    // China Boundary (区县级完整边界线) - R-Tree 空间查询
+    queries.chinaBoundaryByBBox = db.prepare(`
+        SELECT c.geometry, c.properties
+        FROM china_boundary c
+        INNER JOIN china_boundary_rtree r ON c.id = r.id
+        WHERE r.max_x >= ? AND r.min_x <= ?
+          AND r.max_y >= ? AND r.min_y <= ?
     `);
 
     // Cities - 通过 R-Tree 空间查询
@@ -212,6 +222,20 @@ app.get('/api/config', (req, res) => {
 app.get('/api/boundaries', (req, res) => {
     const rows = queries.allBoundaries.all();
     res.json(toFeatureCollection(rows));
+});
+
+// API: 获取中国完整边界线 (区县级，R-Tree + bbox 按需加载)
+app.get('/api/fine-grain-boundaries', (req, res) => {
+    const { bbox } = req.query;
+
+    if (bbox) {
+        const [west, south, east, north] = bbox.split(',').map(Number);
+        const rows = queries.chinaBoundaryByBBox.all(west, east, south, north);
+        return res.json(toFeatureCollection(rows));
+    }
+
+    // 无 bbox 时返回空（强制按需加载）
+    res.json({ type: 'FeatureCollection', features: [] });
 });
 
 // API: 获取城市边界

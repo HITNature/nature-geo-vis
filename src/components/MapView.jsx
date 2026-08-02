@@ -32,10 +32,15 @@ const poiIcon = new L.Icon({
 
 // 边界线样式
 const boundaryStyle = {
-    color: '#ff6b6b',
-    weight: 2,
-    opacity: 0.8,
+    color: '#4ea99d',
+    weight: 2.5,
+    opacity: 0.9,
     dashArray: '5, 5'
+};
+const backBoundaryStyle = {
+    color: '#4ea99d',
+    weight: 0.8,
+    opacity: 0.5,
 };
 
 // 行政区划样式
@@ -182,6 +187,7 @@ function MapView({
 }) {
     const [pois, setPois] = useState(null);
     const [boundaries, setBoundaries] = useState(null);
+    const [chinaBoundary, setChinaBoundary] = useState(null);
     const [cities, setCities] = useState(null);
     const [cells, setCells] = useState(null);
     const [selectedCell, setSelectedCell] = useState(null);
@@ -275,6 +281,19 @@ function MapView({
     // 视口变化时加载详细数据
     const handleMoveEnd = useCallback((bbox, zoom) => {
         setCurrentZoom(zoom);
+
+        // 加载细粒度边界线（区县级，始终显示）
+        apiFetch(`/api/fine-grain-boundaries?bbox=${bbox}`)
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (data.features && data.features.length > 0) {
+                    setChinaBoundary(data);
+                }
+            })
+            .catch(err => reportFetchError('fine-grain-boundaries', err));
 
         // 加载网格数据（当缩放级别足够高时）
         if (config && zoom >= config.zoomConfig.showCells) {
@@ -449,6 +468,15 @@ function MapView({
                 selectedFeature={selectedFeature}
                 onMapInstance={onMapInstance}
             />
+
+            {/* 最底层：中国完整边界线（区县级） */}
+            {chinaBoundary && (
+                <GeoJSON
+                    key="china-boundary-layer"
+                    data={chinaBoundary}
+                    style={backBoundaryStyle}
+                />
+            )}
 
             {/* 静态图层：行政区划边界 */}
             {cities && (
